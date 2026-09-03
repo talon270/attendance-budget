@@ -33,11 +33,35 @@ deploy .` puts it on Cloudflare with no changes.
 
 | Tab | What it does |
 |---|---|
-| Courses | Every course, its percentage, its remaining leave, and the sentence that says what to do about it. Also where you set **Start counting from**, if you began keeping records after term started |
+| Courses | Opens on the next class and what skipping it costs. Then every course, its percentage and its remaining leave. A rail carries term progress, the per-course bar, and **Start counting from** |
 | Week | The timetable as a grid. Click a class to cycle it attended → absent → cancelled. Add a make-up class from the form underneath |
 | Reconcile | Type what the official record says; the app reports the gap and lists sessions you could flip. It never flips one itself |
 | Calendar | Author the semester — term dates, holidays, and the days that run another day's timetable — and copy the constant back into this file |
 | Data | Import (as a diff), undo the last import, backup, restore, clear |
+
+## Design
+
+**Dark first.** The dark palette is defined on `:root` and light is derived
+from it, because dark is the one that gets read at 8am in a corridor. Both are
+complete; neither is a filter over the other.
+
+**One accent, and colour that means something.** A muted blue is the only
+decorative colour, and it appears only on interactive things — focus rings, the
+active tab, the progress bar. Green, amber and red are never decoration: they
+mean safe, close to the bar, and under it. Nothing else is allowed to borrow
+them, so a red edge in the corner of your eye always means the same thing.
+
+**A serif carries the numbers.** The percentages and the course code in the hero
+are set in a system serif with tabular figures. A 2.4rem percentage in a UI sans
+reads like an error dialog; in a serif it reads like a figure worth trusting.
+Nothing is downloaded — no webfont, no CDN, because the app has to open with the
+network off.
+
+**Adaptive by layout, not by squeezing.** On a phone it is one stacked column
+and the percentage drops below the course code. From 1080px it becomes two
+columns with a sticky settings rail, so the controls stop pushing the answer
+below the fold. The rail carries three real modules rather than one and a canyon
+of empty background.
 
 ## The things most attendance trackers get wrong
 
@@ -65,6 +89,20 @@ sessions no longer match*. You confirm, and the previous profile is kept under
 one undo. Logged sessions are never pruned to match a new timetable: a session
 whose id stops generating just stops counting, and counts again if the section
 moves back.
+
+**The page opens on the question you actually came with.** Not a dashboard —
+the next class that has not finished yet, when it is, and what missing it costs:
+*"Skipping it costs 2.0h. You would still have 18.0h of leave in ECO354."* The
+three buttons under it are deliberately equal and unfilled. A blue call-to-action
+reading "mark absent" is an app nudging you to skip a class; these are three
+statements of fact, and whichever is already true is the disabled one.
+
+**A future class you have already marked absent costs the budget now, not on
+the day it passes.** This was a bug: the budget assumed you would attend every
+remaining class, so pre-marking one absent changed nothing until the date rolled
+by, and the app quietly told you that you had an hour of leave you had already
+spent. The hour stays in the semester total — the class is still scheduled — but
+it stops counting toward what you will have attended.
 
 **You can start counting from the day you actually started keeping records.**
 Term began on 17 August; if you only opened this app in September, the app has
@@ -120,7 +158,7 @@ keys but no meeting times.
 | Contact hours. Verified against all 1068 meetings in the timetable data: nine distinct durations, `round(min/60*2)/2` maps every one unambiguously | Half-semester courses. 1066 of 1068 meetings are `Full semester` and none are tagged second-half, so that path is verified against a synthetic fixture only |
 | The semester calendar. Transcribed from the university's published PDF and checked against its own teaching-day table — all 30 per-weekday counts, both half-totals, all 79 days | The 75% bar. It is the usual figure, editable per course where a syllabus sets its own |
 | Saturday teaches. 28 meetings are scheduled on Saturdays; Sunday has none | Which courses meet on the 1 October buffer day. See below |
-| The arithmetic. 99 assertions, driven by real clicks | |
+| The arithmetic. 118 assertions, driven by real clicks | |
 
 ## The semester calendar
 
