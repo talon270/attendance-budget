@@ -130,6 +130,8 @@ label.field{display:flex; flex-direction:column; gap:4px; font-size:.82rem; colo
 .blk.absent{background:var(--bad-bg); border-color:var(--bad); color:var(--ink)}
 .blk.cancelled{background:var(--cancel-bg); border-color:var(--cancel); color:var(--muted); text-decoration:line-through}
 .blk.extra{border-style:dashed; border-width:2px}
+.blk.uncounted{background:var(--panel2); border-color:var(--line); color:var(--muted); opacity:.6; cursor:default}
+.blk.uncounted .tag{font-style:italic}
 .blk .tag{display:block; font-size:.68rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase}
 .daycol.offday{background:repeating-linear-gradient(45deg,transparent,transparent 7px,var(--panel2) 7px,var(--panel2) 14px)}
 
@@ -194,7 +196,7 @@ td.num,th.num{text-align:right; font-variant-numeric:tabular-nums}
 
 // --- Constants -------------------------------------------------------------
 
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;   // 2 adds countFrom; migrate() backfills it as null
 const STORE_KEY   = 'atten.v1';        // the whole profile, one key
 const UNDO_KEY     = 'atten.undo';     // pre-import snapshot, one deep
 const ARCHIVE_PRE  = 'atten.archive.'; // a displaced semester, never mixed in
@@ -281,7 +283,10 @@ const pctText = f => (Math.floor(f*1000)/10).toFixed(1) + '%';
 
 function blank(){
   return { v: SCHEMA_VERSION, semester: null, planName: '', exportedAt: null, importedAt: null,
-           courses: [], log: {}, extras: [], thresholds: {}, official: {}, theme: null, week: null };
+           courses: [], log: {}, extras: [], thresholds: {}, official: {}, theme: null, week: null,
+           // null means "the whole term". A date here is the day you started
+           // keeping records, and nothing before it counts toward anything.
+           countFrom: null };
 }
 function migrate(o){
   if(!o || typeof o !== 'object') return blank();
@@ -311,9 +316,28 @@ function save(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(S)); }catch
 let _sessions = null;
 function invalidate(){ _sessions = null; }
 
+// The day record-keeping starts. Sessions before it are generated - the grid
+// still draws them, and saying so is the point - but they feed nothing: not
+// what was held, not what you attended, not the semester total, not the budget.
+//
+// Excluding them can only shrink a budget, never inflate one. Dropping an
+// hour that defaults to attended costs the budget h - threshold*h, which is
+// positive, so the number moves against you. That is the right direction for
+// a figure you are guessing at: before this date the app has no records, and
+// counting a class you cannot vouch for as attended is exactly the lie this
+// app exists to not tell.
+//
+// The official record still counts those weeks. That disagreement is real and
+// permanent, which is why setting this raises a banner that does not go away.
+function countFrom(){
+  const d = S.countFrom;
+  return (d && d > CALENDAR.start) ? d : CALENDAR.start;
+}
+
 function sessions(){
   if(_sessions) return _sessions;
   const out = [];
+  const cf = countFrom();
   const off = new Set(CALENDAR.off || []);
   const swaps = CALENDAR.swaps || {};
   const hb = CALENDAR.halfBoundary;
@@ -330,13 +354,13 @@ function sessions(){
       out.push({ id: c.code+'|'+m.comp+'|'+m.sec+'|'+d+'|'+m.start,
                  code: c.code, comp: m.comp, sec: m.sec, date: d,
                  start: m.start, end: m.end, room: m.room, hours: contactHours(m.start, m.end),
-                 swapped: !!swaps[d], extra: false });
+                 swapped: !!swaps[d], extra: false, counted: d >= cf });
     }));
   }
   (S.extras||[]).forEach(x => out.push({
     id: x.code+'|EXTRA|X|'+x.date+'|'+x.start, code: x.code, comp: 'EXTRA', sec: 'X',
     date: x.date, start: x.start, end: x.end, room: x.note||'', hours: contactHours(x.start, x.end),
-    swapped: false, extra: true
+    swapped: false, extra: true, counted: x.date >= cf
   }));
   out.sort((a,b) => a.date < b.date ? -1 : a.date > b.date ? 1 : a.start - b.start);
   _sessions = out;
@@ -371,6 +395,7 @@ function stats(code){
   const todayK = today();
   sessions().forEach(s => {
     if(s.code !== code) return;
+    if(!s.counted) return;
     if(markOf(s) === 'cancelled') return;
     total += s.hours;
     if(s.date < todayK){ held += s.hours; nHeld++; if(markOf(s) === 'absent') absent += s.hours; }
@@ -422,6 +447,14 @@ function banners(){
   if(S.__future) out.push(['bad','This profile was written by a newer version of the app','Some of what it holds may not be shown. Update the app rather than logging on top of it.']);
   if(CALENDAR.provisional) out.push(['warn','The semester calendar is provisional','Its dates were not taken from Ashoka\'s published academic calendar - nothing on this machine holds one. Term start '+prettyDate(CALENDAR.start)+', end '+prettyDate(CALENDAR.end)+', half-semester boundary '+prettyDate(CALENDAR.halfBoundary)+', 0 holidays. Until you author the real one in the Calendar tab, every budget below is arithmetic on dates that are a guess.']);
   if(today() > CALENDAR.end) out.push(['warn','The calendar has run out','It was authored on '+CALENDAR.authored+' for '+CALENDAR.label+', which ended '+prettyDate(CALENDAR.end)+'. No sessions exist past that date, so every budget is frozen at the term end.']);
+  if(S.countFrom && S.countFrom > CALENDAR.start){
+    const x = excluded();
+    out.push(['warn','You are counting from ' + prettyDate(S.countFrom) + ', not from the start of term',
+      x.n + ' session' + (x.n===1?'':'s') + ' worth ' + h1(x.hours) + 'h, between ' + prettyDate(CALENDAR.start)
+      + ' and the day before, are excluded from every figure on this page. Your official record still counts them, '
+      + 'so the percentage here will read higher than the registrar\'s. Use Reconcile before you trust either one.'
+      + (x.logged ? ' ' + x.logged + ' of them have something logged against them, kept but not counted.' : '')]);
+  }
   if(S.semester && S.semester !== CALENDAR.semester) out.push(['bad','Your timetable is from a different semester','It says '+esc(S.semester)+'; this build\'s calendar is '+CALENDAR.semester+'. Nothing has been mixed - import a current plan from the Data tab, and the old profile is archived first.']);
   $('#banners').innerHTML = out.map(b => '<div class="banner '+b[0]+'"><b>'+esc(b[1])+'</b>'+esc(b[2])+'</div>').join('');
 }
@@ -461,7 +494,18 @@ function emptyView(){
 // --- Courses view ----------------------------------------------------------
 
 function coursesView(){
-  let h = '<h2>This semester</h2>';
+  const cf = countFrom(), x = excluded();
+  let h = '<div class="card"><div class="spread"><h2 style="margin:0">Start counting from</h2>'
+    + '<span class="tiny muted">term runs ' + prettyDate(CALENDAR.start) + ' to ' + prettyDate(CALENDAR.end) + '</span></div>'
+    + '<p class="tiny muted">Set this to the day you actually started keeping records. Classes before it still show on the Week grid, greyed out, but count toward nothing here.</p>'
+    + '<div class="row"><label class="field">Date<input type="date" id="cf-date" value="' + cf
+    + '" min="' + CALENDAR.start + '" max="' + CALENDAR.end + '"></label>'
+    + (S.countFrom && S.countFrom > CALENDAR.start
+        ? '<button class="btn small" id="cf-reset">Count the whole term instead</button>'
+          + '<span class="tiny est">' + x.n + ' session' + (x.n===1?'':'s') + ' · ' + h1(x.hours) + 'h excluded</span>'
+        : '<span class="tiny muted">Counting the whole term.</span>')
+    + '</div><div id="cf-msg"></div></div>';
+  h += '<h2>This semester</h2>';
   const all = S.courses.map(c => ({c, st: stats(c.code)}));
   all.sort((a,b) => {
     const rank = {over:0, close:1, safe:2, none:3};
@@ -526,9 +570,15 @@ function weekView(){
       const mark = markOf(s);
       const top = Math.max(0, (s.start-gs)*PX_PER_MIN);
       const ht = Math.max(34, (s.end - s.start)*PX_PER_MIN);
-      h += '<button class="blk '+mark+(s.extra?' extra':'')+'" data-sid="'+esc(s.id)+'" style="top:'+top+'px;height:'+ht+'px" '
-        + 'title="'+esc(s.code+' '+s.comp+' '+s.sec+' · '+h1(s.hours)+'h · '+mark)+'">'
-        + '<span class="tag">'+(s.extra?'added':mark)+(s.swapped?' · swap':'')+'</span>'
+      // A session before the count-from date is drawn but not clickable: it can
+      // hold no mark that would change a number, and a control that silently
+      // does nothing is worse than one that is visibly off.
+      const cls = s.counted ? mark + (s.extra?' extra':'') : 'uncounted';
+      const tip = s.counted ? mark : 'not counted - before ' + prettyDate(countFrom());
+      h += '<button class="blk '+cls+'" '+(s.counted ? 'data-sid="'+esc(s.id)+'"' : 'disabled')
+        + ' style="top:'+top+'px;height:'+ht+'px" '
+        + 'title="'+esc(s.code+' '+s.comp+' '+s.sec+' · '+h1(s.hours)+'h · '+tip)+'">'
+        + '<span class="tag">'+(s.counted ? (s.extra?'added':mark) : 'not counted')+(s.swapped?' · swap':'')+'</span>'
         + '<b>'+esc(s.code)+'</b>'+esc(s.comp)+' '+hhmm(s.start)+'</button>';
     });
     h += '</div>';
@@ -678,6 +728,16 @@ function calendarView(){
     + '<button class="btn primary" id="ed-copy">Copy the constant</button> <span id="ed-msg" class="tiny"></span>'
     + '<pre class="out" id="ed-out">'+esc(edConstant())+'</pre></div>';
   return h;
+}
+// Non-cancelled sessions the count-from date is holding back, so both the
+// banner and the control can state the cost in the currency that matters.
+function excluded(){
+  let n = 0, hours = 0, logged = 0;
+  sessions().forEach(s => {
+    if(s.counted || markOf(s) === 'cancelled') return;
+    n++; hours += s.hours; if(S.log[s.id]) logged++;
+  });
+  return {n, hours, logged};
 }
 function generatedCount(){
   let n = 0, hours = 0;
@@ -829,6 +889,7 @@ document.addEventListener('click', function(e){
       save(); render(); toast('Added a '+h1(contactHours(st,en))+'h extra class for '+code+'.');
       return;
     }
+    case 'cf-reset': S.countFrom = null; save(); render(); toast('Counting the whole term again.'); return;
     case 'ed-reset': edInit(); render(); return;
     case 'ed-copy': {
       const txt = edConstant();
@@ -875,6 +936,14 @@ document.addEventListener('change', function(e){
     if(v === '') delete S.official[d.off]; else S.official[d.off] = Number(v);
     save(); render(); return;
   }
+  if(e.target.id === 'cf-date'){
+    const v = e.target.value;
+    if(!v) return msg('#cf-msg','Pick a date, or use the button to count the whole term.','err');
+    if(v < CALENDAR.start || v > CALENDAR.end)
+      return msg('#cf-msg','That date is outside the semester (' + CALENDAR.start + ' to ' + CALENDAR.end + ').','err');
+    S.countFrom = (v === CALENDAR.start) ? null : v;
+    save(); render(); return;
+  }
   if(e.target.id === 'ed-start'){ ED.start = e.target.value; render(); return; }
   if(e.target.id === 'ed-end'){ ED.end = e.target.value; render(); return; }
   if(e.target.id === 'ed-hb'){ ED.halfBoundary = e.target.value; render(); return; }
@@ -913,7 +982,7 @@ if('serviceWorker' in navigator && location.protocol.indexOf('http') === 0)
 
 // Exposed for the verification harness, not for the page. Everything the UI
 // does goes through a real click; these are read-only handles onto the maths.
-window.Atten = { CALENDAR, sessions, stats, stateLine, contactHours, diffAgainst,
+window.Atten = { CALENDAR, sessions, stats, stateLine, contactHours, diffAgainst, countFrom, excluded,
                  state: () => S, render, save, blank };
 })();
 </script>

@@ -13,6 +13,13 @@ reading alone except where labelled unconfirmed.
 **Status: implemented 2026-09-03.** B0–B10 are built and verified — 77 assertions
 in the harness, all passing, driven by real clicks.
 
+**One feature was added after the plan**: a `countFrom` date on the Courses tab,
+so a student who started keeping records mid-term can exclude the weeks they
+cannot vouch for. `SCHEMA_VERSION` went to 2 with the migration in the same
+change. It was not foreseen here, and it belongs to the same rule everything
+else in this document serves — the app must never count a class it is guessing
+about as attended.
+
 **A4 is resolved, and its finding was wrong.** The plan said no academic calendar
 existed on this machine and no PDF tooling existed to read one. The calendar was
 supplied afterwards as `academic_calendar_monsoon_2026.pdf`, and `pdftotext` and

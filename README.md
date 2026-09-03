@@ -33,7 +33,7 @@ deploy .` puts it on Cloudflare with no changes.
 
 | Tab | What it does |
 |---|---|
-| Courses | Every course, its percentage, its remaining leave, and the sentence that says what to do about it |
+| Courses | Every course, its percentage, its remaining leave, and the sentence that says what to do about it. Also where you set **Start counting from**, if you began keeping records after term started |
 | Week | The timetable as a grid. Click a class to cycle it attended → absent → cancelled. Add a make-up class from the form underneath |
 | Reconcile | Type what the official record says; the app reports the gap and lists sessions you could flip. It never flips one itself |
 | Calendar | Author the semester — term dates, holidays, and the days that run another day's timetable — and copy the constant back into this file |
@@ -65,6 +65,27 @@ sessions no longer match*. You confirm, and the previous profile is kept under
 one undo. Logged sessions are never pruned to match a new timetable: a session
 whose id stops generating just stops counting, and counts again if the section
 moves back.
+
+**You can start counting from the day you actually started keeping records.**
+Term began on 17 August; if you only opened this app in September, the app has
+no idea what you did in those first weeks — and it defaults every past class to
+attended, which would be a guess dressed up as a record. Set **Start counting
+from** on the Courses tab and everything before that date stops feeding every
+figure: not what was held, not what you attended, not the semester total, not
+the budget.
+
+Two design decisions hang off it, both in the same direction. **Excluding those
+weeks can only shrink your budget, never grow it** — dropping an hour that
+defaults to attended costs the budget `h − threshold × h`, which is positive, so
+the number always moves against you. And **the excluded classes still draw on
+the Week grid**, greyed out and marked "not counted", because a class that
+silently vanished from the timetable would be indistinguishable from one the
+calendar never knew about. They are disabled rather than clickable: a control
+that does nothing is worse than one that is visibly off.
+
+What it cannot fix is that **the registrar still counts those weeks.** Your
+percentage here will read higher than the official one, permanently, and a
+banner says so and does not go away. Reconcile is how you close that gap.
 
 **Cancelled is a third state, not an absence you forgive.** A cancelled class
 leaves both sides of the fraction — it is removed from what was held, from the
@@ -99,7 +120,7 @@ keys but no meeting times.
 | Contact hours. Verified against all 1068 meetings in the timetable data: nine distinct durations, `round(min/60*2)/2` maps every one unambiguously | Half-semester courses. 1066 of 1068 meetings are `Full semester` and none are tagged second-half, so that path is verified against a synthetic fixture only |
 | The semester calendar. Transcribed from the university's published PDF and checked against its own teaching-day table — all 30 per-weekday counts, both half-totals, all 79 days | The 75% bar. It is the usual figure, editable per course where a syllabus sets its own |
 | Saturday teaches. 28 meetings are scheduled on Saturdays; Sunday has none | Which courses meet on the 1 October buffer day. See below |
-| The arithmetic. 77 assertions, driven by real clicks | |
+| The arithmetic. 99 assertions, driven by real clicks | |
 
 ## The semester calendar
 
