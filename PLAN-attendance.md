@@ -10,11 +10,19 @@ for its export payload shape, storage keys and grid constants; the filesystem
 searched for calendar sources and PDF tooling. Nothing here is inferred from
 reading alone except where labelled unconfirmed.
 
-**Status: implemented 2026-09-03.** B0–B10 are built and verified — 61 assertions
-in the harness, all passing, driven by real clicks. The one thing still
-outstanding is the one this plan already named: the real Monsoon 2026 term
-dates. The shipped `CALENDAR` is a placeholder flagged `provisional: true`, and
-the app refuses to be quiet about it.
+**Status: implemented 2026-09-03.** B0–B10 are built and verified — 77 assertions
+in the harness, all passing, driven by real clicks.
+
+**A4 is resolved, and its finding was wrong.** The plan said no academic calendar
+existed on this machine and no PDF tooling existed to read one. The calendar was
+supplied afterwards as `academic_calendar_monsoon_2026.pdf`, and `pdftotext` and
+`pdftoppm` were both already installed — the search that produced A4 looked for
+Python PDF libraries and missed poppler. The shipped `CALENDAR` is now
+transcribed from that PDF, `provisional` is `false`, and the transcription is
+checked against the PDF's own teaching-day table: 30 per-weekday counts, two
+half-totals, 79 days, all reproduced exactly. Rendering the page to an image
+mattered — the PDF distinguishes university from restricted holidays by colour
+alone, and the text layer does not carry it.
 
 ---
 

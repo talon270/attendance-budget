@@ -207,21 +207,43 @@ const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat'];   // Sunday never teaches
 const PX_PER_MIN = 1.25;              // Bob's scale, so the grids look alike
 const DEFAULT_GRID_START = 480, DEFAULT_GRID_END = 1200;
 
-// Authored 2026-09-03 for Monsoon 2026. Mon-Sat teach by default; every date
-// below is an exception. halfBoundary splits First half from Second half.
+// Authored 2026-09-03 from Shiv Nadar University's published "Academic Calendar
+// for Monsoon 2026 (Aug to Dec 2026)", kept beside this file as
+// academic_calendar_monsoon_2026.pdf. Mon-Sat teach by default; every date
+// below is an exception.
 //
-// provisional: true means these dates were NOT taken from Ashoka's published
-// academic calendar - no copy of it exists on this machine. The app says so in
-// a banner it will not let you dismiss, because a wrong term end silently
-// inflates every budget on the Courses tab. Author the real one in the
-// Calendar tab and paste it over this block.
+// Only that PDF's RED days are off. Its ORANGE days are restricted holidays and
+// classes run on them: Raksha Bandhan, Milad-un-nabi, Janmashtami, Vinayaka
+// Chaturthi, Maha Ashtami, Karaka Chaturthi and Bhai Duj are all teaching days.
+// The PDF's own per-weekday teaching counts prove it, and this file reproduces
+// all thirty of those counts exactly - see the harness.
+//
+// halfBoundary is 1 October, not the 12 October the PDF labels "2nd half
+// begins", and that is deliberate. The PDF also publishes 39 first-half and 40
+// second-half teaching days, and the only split reproducing both puts the
+// 1 October buffer day in the second half. First Half Finishes 30 September,
+// exactly as the PDF's own label on that date says.
 const CALENDAR = {
   semester: 'monsoon2026', label: 'Monsoon 2026',
-  authored: '2026-09-03', provisional: true,
-  start: '2026-08-17', end: '2026-12-05',
-  halfBoundary: '2026-10-12',
-  off: [],            // dates with no classes at all
-  swaps: {}           // 'YYYY-MM-DD': 'Mon' - this date runs another day's timetable
+  authored: '2026-09-03', provisional: false,
+  source: 'Shiv Nadar University, Academic Calendar for Monsoon 2026',
+  start: '2026-08-17',   // Start of classes for all students
+  end:   '2026-12-01',   // Last Teaching Day, run as a Friday
+  halfBoundary: '2026-10-01',
+  off: [
+    '2026-10-02',                                        // Gandhi Jayanti
+    '2026-10-03', '2026-10-05', '2026-10-06',            // Mid Term Examinations
+    '2026-10-07', '2026-10-08', '2026-10-09',
+    '2026-10-10',                                        // No class day
+    '2026-10-20',                                        // Dussehra / Maha Navami
+    '2026-10-30', '2026-10-31',                          // Surge / No class day
+    '2026-11-09',                                        // Govardhan Puja
+    '2026-11-24'                                         // Guru Nanak's Birthday
+  ],
+  // The last two teaching days run another day's timetable. A Monday-only
+  // course therefore meets neither of them, and a Friday-only course gets one
+  // last meeting on 1 December.
+  swaps: { '2026-11-30': 'Tue', '2026-12-01': 'Fri' }
 };
 
 // --- Small helpers ---------------------------------------------------------
@@ -424,7 +446,7 @@ function render(){
     view === 'calendar'  ? calendarView() : dataView();
   $('#foot').innerHTML = 'Everything is stored in this browser under <code>atten.v1</code>. No account, no server, no network. '
     + (S.importedAt ? 'Timetable imported ' + esc(S.importedAt.slice(0,10)) + '. ' : '')
-    + 'Calendar authored ' + CALENDAR.authored + '.';
+    + 'Calendar authored ' + CALENDAR.authored + (CALENDAR.source ? ' from ' + CALENDAR.source + '.' : '.');
 }
 
 function emptyView(){
@@ -609,6 +631,7 @@ function edConstant(){
   return 'const CALENDAR = {\n'
     + "  semester: '"+CALENDAR.semester+"', label: '"+CALENDAR.label+"',\n"
     + "  authored: '"+today()+"', provisional: false,\n"
+    + "  source: '"+(CALENDAR.source||'')+"',\n"
     + "  start: '"+ED.start+"', end: '"+ED.end+"',\n"
     + "  halfBoundary: '"+ED.halfBoundary+"',\n"
     + '  off: ['+ off.map(d => "'"+d+"'").join(', ') +'],\n'

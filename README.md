@@ -96,15 +96,52 @@ keys but no meeting times.
 
 | Solid | Assumed |
 |---|---|
-| Contact hours. Verified against all 1068 meetings in `new_timetable.json`: nine distinct durations, `round(min/60*2)/2` maps every one unambiguously | **The semester calendar.** Term start, term end, the half-semester boundary and the holiday list are a placeholder, flagged `provisional: true`, and the app says so in a banner it will not let you dismiss |
-| Saturday teaches. 28 meetings are scheduled on Saturdays; Sunday has none | Half-semester courses. 1066 of 1068 meetings are `Full semester` and none are tagged second-half, so that path is verified against a synthetic fixture only |
-| The arithmetic. 61 assertions, driven by real clicks | The 75% bar. It is the usual Ashoka figure, editable per course where a syllabus sets its own |
+| Contact hours. Verified against all 1068 meetings in the timetable data: nine distinct durations, `round(min/60*2)/2` maps every one unambiguously | Half-semester courses. 1066 of 1068 meetings are `Full semester` and none are tagged second-half, so that path is verified against a synthetic fixture only |
+| The semester calendar. Transcribed from the university's published PDF and checked against its own teaching-day table — all 30 per-weekday counts, both half-totals, all 79 days | The 75% bar. It is the usual figure, editable per course where a syllabus sets its own |
+| Saturday teaches. 28 meetings are scheduled on Saturdays; Sunday has none | Which courses meet on the 1 October buffer day. See below |
+| The arithmetic. 77 assertions, driven by real clicks | |
 
-The provisional banner goes away when you author the real calendar in the
-Calendar tab and paste its constant over the `CALENDAR` block at the top of
-`index.html`'s script. The editor deliberately writes to your clipboard and not
-to storage: a calendar saved in one browser would leave every other copy of the
-app with an empty one.
+## The semester calendar
+
+`academic_calendar_monsoon_2026.pdf` in this repository is the source. The
+`CALENDAR` constant at the top of `index.html` is a transcription of it, and the
+harness checks that transcription against the PDF's own arithmetic: the
+teaching-day table prints a count for every weekday of every month, a total per
+month, and a total per half. That is thirty independent counts made by the
+registrar, and this file reproduces all thirty — 13 in August, 26 in September,
+16 in October, 23 in November, 1 in December; 39 in the first half, 40 in the
+second, 79 in total, with no day left over.
+
+Two readings of that PDF took judgement, and both are written into the constant
+next to the dates they affect:
+
+**Only the red days are off.** The PDF colour-codes university holidays in red
+and *restricted* holidays in orange, and classes run on the orange ones. Raksha
+Bandhan, Milad-un-nabi, Janmashtami, Vinayaka Chaturthi, Maha Ashtami, Karaka
+Chaturthi and Bhai Duj are all teaching days. Reading the text alone would have
+closed the university on seven days it is open, which understates every
+denominator in the app. The published weekday counts confirm the colours: August
+has two teaching Fridays, and the 28th — Raksha Bandhan — is one of them.
+
+**The half-semester boundary is 1 October, not the 12 October the PDF labels
+"2nd half begins".** The PDF also publishes 39 first-half and 40 second-half
+teaching days, and the only split that produces both numbers puts the 1 October
+buffer day in the second half. A first-half course therefore last meets on 30
+September, which is exactly what that date's own label — "First Half Finishes" —
+says. What the buffer day is *for* is not stated anywhere in the document; this
+is the reading that agrees with the registrar's counts, not a confident claim
+about which classes actually run that Thursday.
+
+The last two teaching days run someone else's timetable: **30 November runs
+Tuesday's schedule and 1 December runs Friday's.** A Monday-only course finishes
+on 23 November and meets neither; a Friday-only course gets one last meeting in
+December.
+
+If any of this changes mid-term — a holiday declared late, an extra buffer day —
+the Calendar tab is where you re-author it. Click days to cycle them, copy the
+constant, paste it over the `CALENDAR` block. The editor writes to your
+clipboard and never to storage, on purpose: a calendar saved in one browser
+would leave every other copy of the app with the old one.
 
 ## Data and privacy
 
