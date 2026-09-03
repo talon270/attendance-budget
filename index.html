@@ -1,0 +1,898 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Attendance budget</title>
+<meta name="description" content="How much class you can still miss. Offline, private, no account.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#1d2021">
+<style>
+/* ==========================================================================
+   ATTENDANCE BUDGET · STYLE
+   --------------------------------------------------------------------------
+   · Tokens, light and dark, defined together — dark is not a bolted-on toggle
+   · Layout: one centred column, capped, never stranded against an edge
+   · Week grid: absolutely positioned blocks over an hour ruler, Bob's scale
+   · State colours: attended / absent / cancelled, and the three budget states
+   ========================================================================== */
+:root{
+  --bg:#faf9f7; --panel:#ffffff; --panel2:#f3f1ec; --ink:#1d2021; --muted:#6b6560;
+  --line:#e2ddd5; --accent:#2f6690; --accent-ink:#ffffff;
+  --ok:#2e7d4f; --warn:#a6720b; --bad:#a52a1e; --cancel:#8a847c;
+  --ok-bg:#e7f3ec; --warn-bg:#fbf1dc; --bad-bg:#fbe9e7; --cancel-bg:#eeece8;
+  --shadow:0 1px 2px rgba(29,32,33,.08), 0 4px 14px rgba(29,32,33,.05);
+  --hh:75px; /* one hour of grid = 60min x PX_PER_MIN, set from JS */
+}
+html[data-theme="dark"]{
+  --bg:#1d2021; --panel:#282828; --panel2:#32302f; --ink:#ebdbb2; --muted:#a89984;
+  --line:#3c3836; --accent:#83a598; --accent-ink:#1d2021;
+  --ok:#b8bb26; --warn:#fabd2f; --bad:#fb4934; --cancel:#7c6f64;
+  --ok-bg:#32361f; --warn-bg:#3a3320; --bad-bg:#3a2422; --cancel-bg:#32302f;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font:15px/1.5 ui-sans-serif,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  -webkit-text-size-adjust:100%;
+}
+h1,h2,h3{line-height:1.25; margin:0 0 .4em}
+h1{font-size:1.15rem; letter-spacing:.01em}
+h2{font-size:1rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); font-weight:600}
+h3{font-size:1.05rem}
+p{margin:0 0 .8em}
+a{color:var(--accent)}
+code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+
+.wrap{max-width:1100px; margin:0 auto; padding:0 16px}
+header.top{background:var(--panel); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:20}
+header.top .wrap{display:flex; align-items:center; gap:12px; min-height:56px; flex-wrap:wrap}
+.brand{font-weight:700; font-size:1.05rem; margin-right:auto}
+.brand small{display:block; font-weight:400; font-size:.72rem; color:var(--muted); letter-spacing:.04em}
+nav.tabs{background:var(--panel); border-bottom:1px solid var(--line); position:sticky; top:56px; z-index:19}
+nav.tabs .wrap{display:flex; gap:2px; overflow-x:auto; scrollbar-width:thin}
+nav.tabs button{
+  background:none; border:0; border-bottom:2px solid transparent; color:var(--muted);
+  padding:10px 12px; font:inherit; font-weight:600; cursor:pointer; white-space:nowrap;
+}
+nav.tabs button[aria-current="page"]{color:var(--ink); border-bottom-color:var(--accent)}
+main{padding:18px 0 60px}
+footer.bot{border-top:1px solid var(--line); color:var(--muted); font-size:.8rem; padding:14px 0 40px}
+
+button,select,input,textarea{font:inherit; color:inherit}
+.btn{
+  background:var(--panel2); color:var(--ink); border:1px solid var(--line); border-radius:8px;
+  padding:7px 12px; cursor:pointer; font-weight:600;
+}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent); color:var(--accent-ink); border-color:var(--accent)}
+.btn.small{padding:4px 8px; font-size:.82rem; font-weight:500}
+.btn:disabled{opacity:.5; cursor:default}
+input[type=text],input[type=date],input[type=time],input[type=number],select,textarea{
+  background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:7px 9px;
+}
+label.field{display:flex; flex-direction:column; gap:4px; font-size:.82rem; color:var(--muted); font-weight:600}
+
+.card{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px; box-shadow:var(--shadow); margin:0 0 14px}
+.grid2{display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:14px; align-items:start}
+.muted{color:var(--muted)}
+.tiny{font-size:.8rem}
+.est{color:var(--warn); font-weight:600}
+.row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+.spread{display:flex; justify-content:space-between; align-items:baseline; gap:10px}
+
+/* Banners: persistent, loud, never dismissible when they describe a number
+   that could be wrong. A tidy UI is not worth a student failing an attendance
+   bar this app told them they had room under. */
+.banner{border-radius:10px; padding:10px 14px; margin:0 0 12px; border:1px solid; font-size:.9rem}
+.banner.warn{background:var(--warn-bg); border-color:var(--warn); color:var(--ink)}
+.banner.bad{background:var(--bad-bg); border-color:var(--bad); color:var(--ink)}
+.banner b{display:block}
+
+/* Course lines */
+.course{border:1px solid var(--line); border-left-width:5px; border-radius:10px; padding:12px 14px; margin:0 0 10px; background:var(--panel); cursor:pointer}
+.course:hover{border-color:var(--accent)}
+.course.safe{border-left-color:var(--ok)}
+.course.close{border-left-color:var(--warn)}
+.course.over{border-left-color:var(--bad)}
+.course.none{border-left-color:var(--cancel)}
+.course .pct{font-size:1.45rem; font-weight:700; font-variant-numeric:tabular-nums}
+.course .code{font-weight:700}
+.course .line{margin-top:4px; font-size:.9rem}
+.course.safe .pct{color:var(--ok)} .course.close .pct{color:var(--warn)} .course.over .pct{color:var(--bad)}
+.course.none .pct{font-size:1rem; color:var(--muted)}
+.pill{display:inline-block; border-radius:999px; padding:1px 8px; font-size:.74rem; font-weight:700; border:1px solid}
+.pill.safe{color:var(--ok); border-color:var(--ok); background:var(--ok-bg)}
+.pill.close{color:var(--warn); border-color:var(--warn); background:var(--warn-bg)}
+.pill.over{color:var(--bad); border-color:var(--bad); background:var(--bad-bg)}
+.pill.none{color:var(--muted); border-color:var(--line); background:var(--panel2)}
+
+/* Week grid — Bob's shape: an hour ruler and absolutely positioned blocks. */
+.gridwrap{overflow-x:auto; border:1px solid var(--line); border-radius:12px; background:var(--panel)}
+.gridhead{display:grid; grid-template-columns:52px repeat(6,minmax(112px,1fr)); border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--panel); z-index:2}
+.gridhead div{padding:7px 6px; font-size:.8rem; font-weight:700; text-align:center; color:var(--muted)}
+.gridhead div.today{color:var(--accent)}
+.gridbody{display:grid; grid-template-columns:52px repeat(6,minmax(112px,1fr)); position:relative}
+.timecol{position:relative; border-right:1px solid var(--line)}
+.timecol span{position:absolute; right:6px; transform:translateY(-50%); font-size:.7rem; color:var(--muted)}
+.daycol{position:relative; border-right:1px solid var(--line)}
+.daycol:last-child{border-right:0}
+.hourline{position:absolute; left:0; right:0; border-top:1px solid var(--line); opacity:.6}
+.blk{
+  position:absolute; left:3px; right:3px; border-radius:7px; padding:4px 6px; overflow:hidden;
+  border:1px solid; font-size:.76rem; line-height:1.25; cursor:pointer; text-align:left;
+}
+.blk b{display:block; font-size:.82rem}
+.blk.attended{background:var(--ok-bg); border-color:var(--ok); color:var(--ink)}
+.blk.absent{background:var(--bad-bg); border-color:var(--bad); color:var(--ink)}
+.blk.cancelled{background:var(--cancel-bg); border-color:var(--cancel); color:var(--muted); text-decoration:line-through}
+.blk.extra{border-style:dashed; border-width:2px}
+.blk .tag{display:block; font-size:.68rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase}
+.daycol.offday{background:repeating-linear-gradient(45deg,transparent,transparent 7px,var(--panel2) 7px,var(--panel2) 14px)}
+
+/* Calendar editor */
+.months{display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:14px}
+.month h3{font-size:.9rem; text-align:center; margin-bottom:6px}
+.mgrid{display:grid; grid-template-columns:repeat(7,1fr); gap:3px}
+.mgrid .dow{font-size:.68rem; text-align:center; color:var(--muted); font-weight:700}
+.mgrid button{
+  aspect-ratio:1; border:1px solid var(--line); border-radius:6px; background:var(--panel);
+  font-size:.75rem; cursor:pointer; padding:0; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; line-height:1;
+}
+.mgrid button.blank{border:0; background:none; cursor:default}
+.mgrid button.outside{opacity:.3; cursor:default}
+.mgrid button.off{background:var(--bad-bg); border-color:var(--bad); text-decoration:line-through}
+.mgrid button.swap{background:var(--warn-bg); border-color:var(--warn)}
+.mgrid button.sun{opacity:.45; cursor:default}
+.mgrid button small{font-size:.6rem; color:var(--warn); font-weight:700}
+pre.out{background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:10px; overflow:auto; font-size:.78rem; max-height:340px; white-space:pre}
+
+table{border-collapse:collapse; width:100%; font-size:.88rem}
+th,td{text-align:left; padding:6px 8px; border-bottom:1px solid var(--line)}
+th{color:var(--muted); font-size:.76rem; text-transform:uppercase; letter-spacing:.06em}
+td.num,th.num{text-align:right; font-variant-numeric:tabular-nums}
+.tablewrap{overflow-x:auto}
+
+.empty{text-align:center; padding:40px 16px}
+.empty h2{color:var(--ink); text-transform:none; letter-spacing:0; font-size:1.3rem}
+.steps{max-width:520px; margin:0 auto; text-align:left}
+.steps li{margin-bottom:10px}
+.msg{border-radius:8px; padding:8px 12px; font-size:.88rem; margin:8px 0; border:1px solid}
+.msg.err{background:var(--bad-bg); border-color:var(--bad)}
+.msg.ok{background:var(--ok-bg); border-color:var(--ok)}
+@media print{ nav.tabs,header.top .btn{display:none} }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand">Attendance budget<small id="brand-sub">no timetable loaded</small></div>
+    <button class="btn small" id="theme-btn" title="Switch between light and dark">Theme</button>
+  </div>
+</header>
+<nav class="tabs"><div class="wrap" id="tabbar"></div></nav>
+<main><div class="wrap"><div id="banners"></div><div id="view"></div></div></main>
+<footer class="bot"><div class="wrap" id="foot"></div></footer>
+<script>
+/* ==========================================================================
+   ATTENDANCE BUDGET · CORE
+   --------------------------------------------------------------------------
+   · CALENDAR — the hardcoded semester, authored through the Calendar tab
+   · Storage  — one key, atten.v1, integer SCHEMA_VERSION, migrate on read
+   · Import   — a bob-attendance payload, applied as a diff, never a replace
+   · Sessions — CALENDAR x meetings, expanded into dated, hour-priced sessions
+   · Numbers  — held / attended / budget, every rounding against the student
+   · Views    — Courses, Week, Reconcile, Calendar, Data
+   Public namespace: window.Atten
+   ========================================================================== */
+(function(){
+"use strict";
+
+// --- Constants -------------------------------------------------------------
+
+const SCHEMA_VERSION = 1;
+const STORE_KEY   = 'atten.v1';        // the whole profile, one key
+const UNDO_KEY     = 'atten.undo';     // pre-import snapshot, one deep
+const ARCHIVE_PRE  = 'atten.archive.'; // a displaced semester, never mixed in
+
+// 75% is Ashoka's usual bar. It is per-course editable because a course can
+// set its own, and the app must never argue with a syllabus.
+const DEFAULT_THRESHOLD = 0.75;
+
+const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat'];   // Sunday never teaches
+const PX_PER_MIN = 1.25;              // Bob's scale, so the grids look alike
+const DEFAULT_GRID_START = 480, DEFAULT_GRID_END = 1200;
+
+// Authored 2026-09-03 for Monsoon 2026. Mon-Sat teach by default; every date
+// below is an exception. halfBoundary splits First half from Second half.
+//
+// provisional: true means these dates were NOT taken from Ashoka's published
+// academic calendar - no copy of it exists on this machine. The app says so in
+// a banner it will not let you dismiss, because a wrong term end silently
+// inflates every budget on the Courses tab. Author the real one in the
+// Calendar tab and paste it over this block.
+const CALENDAR = {
+  semester: 'monsoon2026', label: 'Monsoon 2026',
+  authored: '2026-09-03', provisional: true,
+  start: '2026-08-17', end: '2026-12-05',
+  halfBoundary: '2026-10-12',
+  off: [],            // dates with no classes at all
+  swaps: {}           // 'YYYY-MM-DD': 'Mon' - this date runs another day's timetable
+};
+
+// --- Small helpers ---------------------------------------------------------
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// Date keys are local-time YYYY-MM-DD. Never UTC: a boundary that disagrees
+// with the student's clock puts a class on the wrong day.
+function ymd(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function fromYmd(s){ const p = String(s).split('-').map(Number); return new Date(p[0], p[1]-1, p[2]); }
+function today(){ return ymd(new Date()); }
+function addDays(s, n){ const d = fromYmd(s); d.setDate(d.getDate()+n); return ymd(d); }
+function dowName(s){ return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][fromYmd(s).getDay()]; }
+function prettyDate(s){ const d = fromYmd(s); return d.toLocaleDateString(undefined,{weekday:'short', day:'numeric', month:'short'}); }
+function hhmm(min){ const h = Math.floor(min/60), m = min%60, ap = h<12?'am':'pm', h12 = (h%12)||12;
+  return h12 + (m? ':'+String(m).padStart(2,'0') : '') + ap; }
+
+// Contact hours round to the nearest half hour. Verified against all 1068
+// meetings in new_timetable.json: nine distinct durations, every one mapped
+// unambiguously. Nearest rather than ceiling because it stays sane on a
+// duration the catalog does not yet contain - 65 minutes is 1.0h, not 1.5h.
+function contactHours(start, end){ return Math.round((end-start)/60*2)/2; }
+const h1 = n => (Math.round(n*10)/10).toFixed(1);
+// Leave is floored and a shortfall is ceilinged, both to one decimal. 9.75h of
+// budget prints as 9.7h, never 9.8h: a tenth of an hour the student does not
+// have is exactly the lie this app exists to not tell.
+const hDown = n => (Math.floor(n*10 + 1e-9)/10).toFixed(1);
+const hUp   = n => (Math.ceil(n*10 - 1e-9)/10).toFixed(1);
+
+// Percentages floor rather than round: 74.96% must never print as 75%.
+const pctText = f => (Math.floor(f*1000)/10).toFixed(1) + '%';
+
+// --- Storage ---------------------------------------------------------------
+
+function blank(){
+  return { v: SCHEMA_VERSION, semester: null, planName: '', exportedAt: null, importedAt: null,
+           courses: [], log: {}, extras: [], thresholds: {}, official: {}, theme: null, week: null };
+}
+function migrate(o){
+  if(!o || typeof o !== 'object') return blank();
+  const b = blank();
+  // Unknown-future guard: a profile written by a newer build is left alone and
+  // reported, never silently downgraded by filling in fields it may not mean.
+  if(typeof o.v === 'number' && o.v > SCHEMA_VERSION) o.__future = true;
+  Object.keys(b).forEach(k => { if(o[k] === undefined) o[k] = b[k]; });
+  o.v = SCHEMA_VERSION;
+  return o;
+}
+let S = blank();
+function load(){
+  try{ S = migrate(JSON.parse(localStorage.getItem(STORE_KEY))); }
+  catch(e){ S = blank(); S.__corrupt = true; }
+}
+function save(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(S)); }catch(e){ toast('Could not save - storage is full or blocked.','err'); } }
+
+// --- Sessions --------------------------------------------------------------
+//
+// One pass over the semester, in the order the plan fixes: walk the dates,
+// drop the off days and Sundays, resolve a swap to the weekday it runs, then
+// emit one session per meeting on that weekday whose half of term contains it.
+// Session id is code|comp|sec|date|start - stable across re-imports, which is
+// what lets an import be a diff instead of a replace.
+
+let _sessions = null;
+function invalidate(){ _sessions = null; }
+
+function sessions(){
+  if(_sessions) return _sessions;
+  const out = [];
+  const off = new Set(CALENDAR.off || []);
+  const swaps = CALENDAR.swaps || {};
+  const hb = CALENDAR.halfBoundary;
+  for(let d = CALENDAR.start; d <= CALENDAR.end; d = addDays(d,1)){
+    if(off.has(d)) continue;
+    const real = dowName(d);
+    if(real === 'Sun' && !swaps[d]) continue;
+    const day = swaps[d] || real;
+    if(day === 'Sun') continue;
+    S.courses.forEach(c => (c.meetings||[]).forEach(m => {
+      if(m.day !== day) return;
+      if(m.term === 'First half'  && hb && d >= hb) return;
+      if(m.term === 'Second half' && hb && d <  hb) return;
+      out.push({ id: c.code+'|'+m.comp+'|'+m.sec+'|'+d+'|'+m.start,
+                 code: c.code, comp: m.comp, sec: m.sec, date: d,
+                 start: m.start, end: m.end, room: m.room, hours: contactHours(m.start, m.end),
+                 swapped: !!swaps[d], extra: false });
+    }));
+  }
+  (S.extras||[]).forEach(x => out.push({
+    id: x.code+'|EXTRA|X|'+x.date+'|'+x.start, code: x.code, comp: 'EXTRA', sec: 'X',
+    date: x.date, start: x.start, end: x.end, room: x.note||'', hours: contactHours(x.start, x.end),
+    swapped: false, extra: true
+  }));
+  out.sort((a,b) => a.date < b.date ? -1 : a.date > b.date ? 1 : a.start - b.start);
+  _sessions = out;
+  return out;
+}
+
+const markOf = s => S.log[s.id] || 'attended';
+function setMark(id, mark){
+  if(mark === 'attended') delete S.log[id]; else S.log[id] = mark;
+  save();
+}
+function cycle(id){
+  const cur = S.log[id] || 'attended';
+  setMark(id, cur === 'attended' ? 'absent' : cur === 'absent' ? 'cancelled' : 'attended');
+}
+const thresholdOf = code => (S.thresholds && S.thresholds[code] != null) ? S.thresholds[code] : DEFAULT_THRESHOLD;
+
+// --- The numbers -----------------------------------------------------------
+//
+// held    = non-cancelled sessions dated before today
+// attended= held minus the hours marked absent
+// total   = every non-cancelled session, past and future
+// budget  = attended + future - threshold x total, floored at zero
+//
+// The session-equivalent of the budget is floored against the largest session
+// still to come. 9.75h of budget on 1.0h classes is nine classes, not ten:
+// missing ten leaves 29.0h of 39.0h, which is 74.4% and a fail.
+
+function stats(code){
+  const thr = thresholdOf(code);
+  let held = 0, absent = 0, total = 0, future = 0, maxH = 0, nHeld = 0;
+  const todayK = today();
+  sessions().forEach(s => {
+    if(s.code !== code) return;
+    if(markOf(s) === 'cancelled') return;
+    total += s.hours;
+    if(s.date < todayK){ held += s.hours; nHeld++; if(markOf(s) === 'absent') absent += s.hours; }
+    else { future += s.hours; if(s.hours > maxH) maxH = s.hours; }
+  });
+  const attended = held - absent;
+  const budget = attended + future - thr*total;
+  const step = maxH || 1;
+  const st = { code, thr, held, absent, attended, total, future, nHeld,
+               pct: nHeld ? attended/held : null,
+               budgetHours: Math.max(0, budget),
+               budgetSessions: Math.max(0, Math.floor(Math.max(0,budget)/step)),
+               step, reachable: budget >= 0 || (attended + future) >= thr*total };
+  st.shortHours = st.pct == null ? 0 : Math.max(0, thr*held - attended);
+  st.state = !nHeld ? 'none' : st.pct < thr ? 'over' : (st.budgetHours < step ? 'close' : 'safe');
+  return st;
+}
+
+function stateLine(st){
+  // No percentage exists before the first class, but the budget does - it is
+  // arithmetic on the calendar alone. Showing the total and staying silent on
+  // the leave would withhold the one number the student came for.
+  if(st.state === 'none') return 'No classes held yet - ' + h1(st.total) + 'h scheduled. That leaves '
+    + hDown(st.budgetHours) + 'h of leave (' + st.budgetSessions + ' ' + (st.budgetSessions===1?'class':'classes')
+    + ' of ' + h1(st.step) + 'h) at a ' + Math.round(st.thr*100) + '% bar.';
+  if(st.state === 'over'){
+    let l = 'You are ' + hUp(st.shortHours) + 'h short of ' + Math.round(st.thr*100) + '%. ' + h1(st.future) + 'h of classes remain.';
+    if(!st.reachable) l += ' Attending every one of them still leaves you under the bar - this course cannot be recovered by attendance alone.';
+    return l;
+  }
+  if(st.state === 'close') return hDown(st.budgetHours) + 'h left. One more absence puts you under ' + Math.round(st.thr*100) + '%.';
+  return hDown(st.budgetHours) + 'h of leave left (' + st.budgetSessions + ' ' + (st.budgetSessions===1?'class':'classes') + ' of ' + h1(st.step) + 'h).';
+}
+
+// --- Chrome: banners, toasts, tabs ----------------------------------------
+
+function toast(msg, kind){
+  const el = document.createElement('div');
+  el.className = 'msg ' + (kind==='err'?'err':'ok');
+  el.setAttribute('role','status');
+  el.textContent = msg;
+  $('#banners').appendChild(el);
+  setTimeout(() => el.remove(), 6000);
+}
+
+function banners(){
+  const out = [];
+  if(S.__corrupt) out.push(['bad','Your saved profile could not be read','It was not overwritten. Restore a backup from the Data tab before logging anything, or the unreadable copy will be replaced the next time you click.']);
+  if(S.__future) out.push(['bad','This profile was written by a newer version of the app','Some of what it holds may not be shown. Update the app rather than logging on top of it.']);
+  if(CALENDAR.provisional) out.push(['warn','The semester calendar is provisional','Its dates were not taken from Ashoka\'s published academic calendar - nothing on this machine holds one. Term start '+prettyDate(CALENDAR.start)+', end '+prettyDate(CALENDAR.end)+', half-semester boundary '+prettyDate(CALENDAR.halfBoundary)+', 0 holidays. Until you author the real one in the Calendar tab, every budget below is arithmetic on dates that are a guess.']);
+  if(today() > CALENDAR.end) out.push(['warn','The calendar has run out','It was authored on '+CALENDAR.authored+' for '+CALENDAR.label+', which ended '+prettyDate(CALENDAR.end)+'. No sessions exist past that date, so every budget is frozen at the term end.']);
+  if(S.semester && S.semester !== CALENDAR.semester) out.push(['bad','Your timetable is from a different semester','It says '+esc(S.semester)+'; this build\'s calendar is '+CALENDAR.semester+'. Nothing has been mixed - import a current plan from the Data tab, and the old profile is archived first.']);
+  $('#banners').innerHTML = out.map(b => '<div class="banner '+b[0]+'"><b>'+esc(b[1])+'</b>'+esc(b[2])+'</div>').join('');
+}
+
+const VIEWS = [['courses','Courses'],['week','Week'],['reconcile','Reconcile'],['calendar','Calendar'],['data','Data']];
+let view = 'courses';
+
+function render(){
+  invalidate();
+  banners();
+  $('#tabbar').innerHTML = VIEWS.map(v =>
+    '<button data-tab="'+v[0]+'"'+(v[0]===view?' aria-current="page"':'')+'>'+v[1]+'</button>').join('');
+  const sub = S.courses.length
+    ? S.courses.length + ' courses · ' + esc(S.planName || CALENDAR.label)
+    : 'no timetable loaded';
+  $('#brand-sub').textContent = sub;
+  $('#view').innerHTML =
+    (!S.courses.length && view !== 'calendar' && view !== 'data') ? emptyView() :
+    view === 'courses'   ? coursesView() :
+    view === 'week'      ? weekView() :
+    view === 'reconcile' ? reconcileView() :
+    view === 'calendar'  ? calendarView() : dataView();
+  $('#foot').innerHTML = 'Everything is stored in this browser under <code>atten.v1</code>. No account, no server, no network. '
+    + (S.importedAt ? 'Timetable imported ' + esc(S.importedAt.slice(0,10)) + '. ' : '')
+    + 'Calendar authored ' + CALENDAR.authored + '.';
+}
+
+function emptyView(){
+  return '<div class="empty"><h2>No timetable yet</h2>'
+    + '<p class="muted">This app never asks you to type your schedule. It reads the plan you already built.</p>'
+    + '<ol class="steps"><li>Open <b>Bob the Builder</b>, pick the plan you are actually enrolled in.</li>'
+    + '<li>Click <b>Export for attendance</b>. You get a <code>…-attendance-….json</code> file.</li>'
+    + '<li>Come back to the <b>Data</b> tab here and load that file.</li></ol>'
+    + '<p><button class="btn primary" data-go="data">Go to Data</button></p></div>';
+}
+
+// --- Courses view ----------------------------------------------------------
+
+function coursesView(){
+  let h = '<h2>This semester</h2>';
+  const all = S.courses.map(c => ({c, st: stats(c.code)}));
+  all.sort((a,b) => {
+    const rank = {over:0, close:1, safe:2, none:3};
+    return rank[a.st.state] - rank[b.st.state] || (a.st.budgetHours - b.st.budgetHours);
+  });
+  h += all.map(({c, st}) =>
+    '<div class="course '+st.state+'" data-course="'+esc(c.code)+'">'
+    + '<div class="spread"><div><span class="code">'+esc(c.code)+'</span> <span class="muted">'+esc(c.title||'')+'</span>'
+    + ' <span class="pill '+st.state+'">'+({over:'over',close:'close',safe:'ok',none:'not started'})[st.state]+'</span></div>'
+    + '<div class="pct">'+(st.pct==null?'—':pctText(st.pct))+'</div></div>'
+    + '<div class="line">'+esc(stateLine(st))+'</div>'
+    + '<div class="tiny muted">'+h1(st.attended)+'h attended of '+h1(st.held)+'h held · '+h1(st.total)+'h scheduled · bar '+Math.round(st.thr*100)+'%</div>'
+    + '</div>').join('');
+  h += '<div class="card"><h2>Attendance bar</h2><p class="tiny muted">The default is '
+    + Math.round(DEFAULT_THRESHOLD*100) + '%. Change it per course where a syllabus sets its own.</p>'
+    + '<div class="tablewrap"><table><thead><tr><th>Course</th><th class="num">Bar %</th><th class="num">Held</th><th class="num">Attended</th><th class="num">Total</th><th class="num">Leave left</th></tr></thead><tbody>'
+    + all.map(({c, st}) => '<tr><td>'+esc(c.code)+'</td>'
+      + '<td class="num"><input type="number" min="1" max="100" step="1" style="width:64px" data-thr="'+esc(c.code)+'" value="'+Math.round(st.thr*100)+'"></td>'
+      + '<td class="num">'+h1(st.held)+'h</td><td class="num">'+h1(st.attended)+'h</td>'
+      + '<td class="num">'+h1(st.total)+'h</td><td class="num">'+hDown(st.budgetHours)+'h</td></tr>').join('')
+    + '</tbody></table></div></div>';
+  return h;
+}
+
+// --- Week view -------------------------------------------------------------
+
+function weekMonday(k){ const d = fromYmd(k); const off = (d.getDay()+6)%7; return addDays(k, -off); }
+
+function weekView(){
+  const mon = S.week || weekMonday(today());
+  const weekDates = DAYS.map((_,i) => addDays(mon, i));
+  const inWeek = sessions().filter(s => s.date >= weekDates[0] && s.date <= weekDates[5]);
+  let gs = DEFAULT_GRID_START, ge = DEFAULT_GRID_END;
+  inWeek.forEach(s => { gs = Math.min(gs, s.start); ge = Math.max(ge, s.end); });
+  gs = Math.floor(gs/60)*60; ge = Math.ceil(ge/60)*60;
+  const hours = (ge-gs)/60, H = hours*60*PX_PER_MIN;
+  const off = new Set(CALENDAR.off||[]);
+
+  let h = '<div class="row" style="margin-bottom:10px">'
+    + '<button class="btn small" data-week="-1">&larr; Previous</button>'
+    + '<button class="btn small" data-week="0">This week</button>'
+    + '<button class="btn small" data-week="1">Next &rarr;</button>'
+    + '<span class="muted tiny">'+prettyDate(weekDates[0])+' – '+prettyDate(weekDates[5])
+    + ' · click a class to cycle attended → absent → cancelled</span></div>';
+
+  if(!inWeek.length && (weekDates[5] < CALENDAR.start || weekDates[0] > CALENDAR.end))
+    h += '<div class="banner warn"><b>Outside the semester</b>This week falls before '+prettyDate(CALENDAR.start)+' or after '+prettyDate(CALENDAR.end)+', so it holds no sessions.</div>';
+
+  h += '<div class="gridwrap"><div class="gridhead"><div></div>'
+    + DAYS.map((d,i) => '<div class="'+(weekDates[i]===today()?'today':'')+'">'+d+'<br><span class="tiny">'+fromYmd(weekDates[i]).getDate()+'</span></div>').join('')
+    + '</div><div class="gridbody">'
+    + '<div class="timecol" style="height:'+H+'px">'
+    + Array.from({length:hours+1}, (_,i) => '<span style="top:'+(i*60*PX_PER_MIN)+'px">'+hhmm(gs+i*60)+'</span>').join('')
+    + '</div>';
+
+  DAYS.forEach((d,i) => {
+    const date = weekDates[i];
+    const isOff = off.has(date) || date < CALENDAR.start || date > CALENDAR.end;
+    h += '<div class="daycol'+(isOff?' offday':'')+'" style="height:'+H+'px">'
+      + Array.from({length:hours}, (_,j) => '<div class="hourline" style="top:'+(j*60*PX_PER_MIN)+'px"></div>').join('');
+    inWeek.filter(s => s.date === date).forEach(s => {
+      const mark = markOf(s);
+      const top = Math.max(0, (s.start-gs)*PX_PER_MIN);
+      const ht = Math.max(34, (s.end - s.start)*PX_PER_MIN);
+      h += '<button class="blk '+mark+(s.extra?' extra':'')+'" data-sid="'+esc(s.id)+'" style="top:'+top+'px;height:'+ht+'px" '
+        + 'title="'+esc(s.code+' '+s.comp+' '+s.sec+' · '+h1(s.hours)+'h · '+mark)+'">'
+        + '<span class="tag">'+(s.extra?'added':mark)+(s.swapped?' · swap':'')+'</span>'
+        + '<b>'+esc(s.code)+'</b>'+esc(s.comp)+' '+hhmm(s.start)+'</button>';
+    });
+    h += '</div>';
+  });
+  h += '</div></div>';
+
+  h += '<div class="card" style="margin-top:14px"><h2>Add an extra class</h2>'
+    + '<p class="tiny muted">A make-up or an unscheduled session. It counts toward both what was held and the semester total, and shows on the grid with a dashed border.</p>'
+    + '<div class="row"><label class="field">Course<select id="ex-code">'
+    + S.courses.map(c => '<option value="'+esc(c.code)+'">'+esc(c.code)+'</option>').join('')
+    + '</select></label>'
+    + '<label class="field">Date<input type="date" id="ex-date" value="'+today()+'" min="'+CALENDAR.start+'" max="'+CALENDAR.end+'"></label>'
+    + '<label class="field">Start<input type="time" id="ex-start" value="10:00"></label>'
+    + '<label class="field">End<input type="time" id="ex-end" value="10:55"></label>'
+    + '<button class="btn primary" id="ex-add">Add</button></div><div id="ex-msg"></div>';
+  if((S.extras||[]).length){
+    h += '<div class="tablewrap" style="margin-top:10px"><table><thead><tr><th>Course</th><th>Date</th><th>Time</th><th class="num">Hours</th><th></th></tr></thead><tbody>'
+      + S.extras.map((x,i) => '<tr><td>'+esc(x.code)+'</td><td>'+prettyDate(x.date)+'</td><td>'+hhmm(x.start)+'–'+hhmm(x.end)+'</td>'
+        + '<td class="num">'+h1(contactHours(x.start,x.end))+'h</td>'
+        + '<td><button class="btn small" data-rmex="'+i+'">Remove</button></td></tr>').join('')
+      + '</tbody></table></div>';
+  }
+  h += '</div>';
+  return h;
+}
+
+// --- Reconcile -------------------------------------------------------------
+//
+// The official record is the authority; this app is not. So reconcile reports
+// the gap and offers candidates, and every flip is your click. It never edits
+// itself to agree with a number you typed - that would launder a typo into a
+// budget you then trust.
+
+function reconcileView(){
+  let h = '<div class="card"><h2>Reconcile against the official record</h2>'
+    + '<p class="tiny muted">Type the percentage your official record shows. This app reports the difference and lists sessions you could flip. It changes nothing on its own.</p></div>';
+  S.courses.forEach(c => {
+    const st = stats(c.code);
+    const off = S.official[c.code];
+    h += '<div class="card"><div class="spread"><h3>'+esc(c.code)+'</h3>'
+      + '<div class="muted tiny">this app says '+(st.pct==null?'—':pctText(st.pct))+' ('+h1(st.attended)+'h of '+h1(st.held)+'h)</div></div>'
+      + '<div class="row"><label class="field">Official %<input type="number" min="0" max="100" step="0.1" style="width:90px" data-off="'+esc(c.code)+'" value="'+(off==null?'':off)+'"></label>';
+    if(off != null && st.nHeld){
+      const officialAttended = off/100*st.held;
+      const gap = st.attended - officialAttended;       // + means we over-count attendance
+      const approx = Math.round(Math.abs(gap)/st.step*10)/10;
+      h += '<div class="tiny">'+(Math.abs(gap) < 0.05
+        ? 'Agrees within half a percent. Nothing to flip.'
+        : (gap > 0
+            ? 'This app credits you <b>'+h1(gap)+'h</b> more than the record does (about '+approx+' classes). You likely forgot to log an absence.'
+            : 'The record credits you <b>'+h1(-gap)+'h</b> more than this app does (about '+approx+' classes). You likely logged an absence you did not take.'))
+        + '</div>';
+    }
+    h += '</div>';
+    if(off != null && st.nHeld){
+      const officialAttended = off/100*st.held;
+      const gap = st.attended - officialAttended;
+      if(Math.abs(gap) >= 0.05){
+        // Most recent first: a missed log is far more common than a false one,
+        // and the class you forgot to log is almost always a recent one.
+        const want = gap > 0 ? 'attended' : 'absent';
+        const cands = sessions().filter(s => s.code === c.code && s.date < today() && markOf(s) === want)
+                                .sort((a,b) => a.date < b.date ? 1 : a.date > b.date ? -1 : b.start - a.start).slice(0,12);
+        h += '<div class="tablewrap"><table><thead><tr><th>Date</th><th>Class</th><th class="num">Hours</th><th></th></tr></thead><tbody>'
+          + (cands.length ? cands.map(s => '<tr><td>'+prettyDate(s.date)+'</td><td>'+esc(s.comp+' '+s.sec)+' '+hhmm(s.start)+'</td>'
+            + '<td class="num">'+h1(s.hours)+'h</td><td><button class="btn small" data-flip="'+esc(s.id)+'" data-to="'+(gap>0?'absent':'attended')+'">Mark '+(gap>0?'absent':'attended')+'</button></td></tr>').join('')
+            : '<tr><td colspan="4" class="muted">No sessions marked '+want+' to flip.</td></tr>')
+          + '</tbody></table></div>';
+      }
+    }
+    h += '</div>';
+  });
+  return h;
+}
+
+// --- Calendar editor -------------------------------------------------------
+//
+// The editor writes to the clipboard, never to storage. A calendar configured
+// in one browser would leave every other copy of this app with an empty one -
+// the calendar is part of the build, so it has to go back into the file.
+
+let ED = null;
+const CYCLE = ['teach','off','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+function edInit(){
+  ED = { start: CALENDAR.start, end: CALENDAR.end, halfBoundary: CALENDAR.halfBoundary,
+         off: new Set(CALENDAR.off||[]), swaps: Object.assign({}, CALENDAR.swaps||{}) };
+}
+function edState(d){ return ED.off.has(d) ? 'off' : (ED.swaps[d] || 'teach'); }
+function edCycle(d){
+  const cur = edState(d);
+  const nxt = CYCLE[(CYCLE.indexOf(cur)+1) % CYCLE.length];
+  ED.off.delete(d); delete ED.swaps[d];
+  if(nxt === 'off') ED.off.add(d);
+  else if(nxt !== 'teach') ED.swaps[d] = nxt;
+}
+function edConstant(){
+  const off = Array.from(ED.off).sort();
+  const sw = Object.keys(ED.swaps).sort();
+  return 'const CALENDAR = {\n'
+    + "  semester: '"+CALENDAR.semester+"', label: '"+CALENDAR.label+"',\n"
+    + "  authored: '"+today()+"', provisional: false,\n"
+    + "  start: '"+ED.start+"', end: '"+ED.end+"',\n"
+    + "  halfBoundary: '"+ED.halfBoundary+"',\n"
+    + '  off: ['+ off.map(d => "'"+d+"'").join(', ') +'],\n'
+    + '  swaps: {'+ sw.map(d => "'"+d+"': '"+ED.swaps[d]+"'").join(', ') +'}\n'
+    + '};';
+}
+function calendarView(){
+  if(!ED) edInit();
+  let h = '<div class="card"><h2>Semester calendar</h2>'
+    + '<p class="tiny muted">Mon–Sat teach by default. Click a day to cycle it: teaching → no classes → runs Monday → Tuesday → … → teaching. When it looks right, copy the constant and paste it over the <code>CALENDAR</code> block at the top of this file\'s script. Nothing here is saved to your browser, on purpose.</p>'
+    + '<div class="row"><label class="field">Term starts<input type="date" id="ed-start" value="'+ED.start+'"></label>'
+    + '<label class="field">Term ends<input type="date" id="ed-end" value="'+ED.end+'"></label>'
+    + '<label class="field">Second half begins<input type="date" id="ed-hb" value="'+ED.halfBoundary+'"></label>'
+    + '<button class="btn" id="ed-reset">Reset to the build\'s calendar</button></div></div>';
+
+  h += '<div class="months">';
+  let cur = fromYmd(ED.start); cur.setDate(1);
+  const last = fromYmd(ED.end);
+  let guard = 0;
+  while(cur <= last && guard++ < 24){
+    const y = cur.getFullYear(), m = cur.getMonth();
+    h += '<div class="month card"><h3>'+cur.toLocaleDateString(undefined,{month:'long', year:'numeric'})+'</h3><div class="mgrid">'
+      + ['M','T','W','T','F','S','S'].map(d => '<div class="dow">'+d+'</div>').join('');
+    const first = new Date(y,m,1), lead = (first.getDay()+6)%7;
+    for(let i=0;i<lead;i++) h += '<button class="blank" disabled></button>';
+    const dim = new Date(y,m+1,0).getDate();
+    for(let dd=1; dd<=dim; dd++){
+      const k = ymd(new Date(y,m,dd));
+      const sun = new Date(y,m,dd).getDay() === 0;
+      const outside = k < ED.start || k > ED.end;
+      const st = edState(k);
+      const cls = sun ? 'sun' : outside ? 'outside' : st === 'off' ? 'off' : st !== 'teach' ? 'swap' : '';
+      h += '<button class="'+cls+'" '+((sun||outside)?'disabled':'data-ed="'+k+'"')+'>'+dd
+        + (st !== 'teach' && st !== 'off' && !sun && !outside ? '<small>'+st+'</small>' : '') + '</button>';
+    }
+    h += '</div></div>';
+    cur = new Date(y, m+1, 1);
+  }
+  h += '</div>';
+
+  const gen = generatedCount();
+  h += '<div class="card"><h2>What this calendar produces</h2>'
+    + '<p class="tiny muted">Against the currently loaded timetable, the <b>build\'s</b> calendar generates <b>'+gen.n+'</b> sessions worth <b>'+h1(gen.hours)+'h</b>. The editor above does not affect this figure until you paste its output into the file.</p>'
+    + '<button class="btn primary" id="ed-copy">Copy the constant</button> <span id="ed-msg" class="tiny"></span>'
+    + '<pre class="out" id="ed-out">'+esc(edConstant())+'</pre></div>';
+  return h;
+}
+function generatedCount(){
+  let n = 0, hours = 0;
+  sessions().forEach(s => { if(markOf(s) !== 'cancelled'){ n++; hours += s.hours; } });
+  return {n, hours};
+}
+
+// --- Data: import as a diff, backup, restore ------------------------------
+
+function dataView(){
+  let h = '<div class="card"><h2>Load a timetable from Bob</h2>'
+    + '<p class="tiny muted">In Bob the Builder, click <b>Export for attendance</b>, then load that file here. Importing is a diff: you see exactly what changes and what logged sessions it costs before anything is written.</p>'
+    + '<input type="file" id="imp-file" accept="application/json,.json"> <div id="imp-msg"></div><div id="imp-diff"></div></div>';
+  if(localStorage.getItem(UNDO_KEY))
+    h += '<div class="card"><h2>Undo the last import</h2><p class="tiny muted">One step deep. Restores the profile exactly as it was before the most recent import.</p><button class="btn" id="undo-btn">Undo the last import</button></div>';
+  h += '<div class="card"><h2>Backup and restore</h2>'
+    + '<p class="tiny muted">The backup is the whole profile - courses, every logged session, extras, bars and reconcile figures. Restoring replaces what is here.</p>'
+    + '<div class="row"><button class="btn" id="bk-btn">Download a backup</button>'
+    + '<input type="file" id="rs-file" accept="application/json,.json"></div><div id="bk-msg"></div></div>';
+  const arch = Object.keys(localStorage).filter(k => k.indexOf(ARCHIVE_PRE) === 0);
+  if(arch.length) h += '<div class="card"><h2>Archived semesters</h2><p class="tiny muted">Kept, never mixed into the current term. There is no browser for them - download one as a backup file if you need it.</p>'
+    + arch.map(k => '<div class="row"><code>'+esc(k)+'</code><button class="btn small" data-arch="'+esc(k)+'">Download</button></div>').join('') + '</div>';
+  h += '<div class="card"><h2>Start over</h2><p class="tiny muted">Clears the whole profile from this browser. Take a backup first - this is not undoable.</p>'
+    + '<button class="btn" id="wipe-btn">Clear everything</button> <span id="wipe-msg" class="tiny"></span></div>';
+  return h;
+}
+
+function readJSON(file){
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onerror = () => rej(new Error('unreadable'));
+    r.onload = () => { try{ res(JSON.parse(r.result)); }catch(e){ rej(new Error('not JSON')); } };
+    r.readAsText(file);
+  });
+}
+function msg(sel, text, kind){ const el = $(sel); if(el) el.innerHTML = '<div class="msg '+(kind==='err'?'err':'ok')+'" role="status">'+esc(text)+'</div>'; }
+
+let PENDING = null;
+
+// The diff. Nothing is written by this function - it only describes what an
+// apply would do, in the currency that matters: logged sessions at risk.
+function diffAgainst(payload){
+  const oldByCode = {}; S.courses.forEach(c => oldByCode[c.code] = c);
+  const newByCode = {}; (payload.courses||[]).forEach(c => newByCode[c.code] = c);
+  const logCount = code => sessions().filter(s => s.code === code && S.log[s.id]).length;
+  const added = Object.keys(newByCode).filter(k => !oldByCode[k]);
+  const removed = Object.keys(oldByCode).filter(k => !newByCode[k]).map(k => ({code:k, logged: logCount(k)}));
+  const changed = [];
+  Object.keys(newByCode).forEach(k => {
+    if(!oldByCode[k]) return;
+    const a = oldByCode[k].sections||{}, b = newByCode[k].sections||{};
+    const comps = Array.from(new Set(Object.keys(a).concat(Object.keys(b))));
+    const moved = comps.filter(c => a[c] !== b[c]);
+    if(!moved.length) return;
+    const lost = sessions().filter(s => s.code === k && S.log[s.id] && moved.indexOf(s.comp) >= 0).length;
+    changed.push({code:k, moved: moved.map(c => c+' '+(a[c]||'none')+' → '+(b[c]||'none')), lost});
+  });
+  return {added, removed, changed, kept: Object.keys(newByCode).length - added.length};
+}
+
+function showDiff(payload){
+  PENDING = payload;
+  const d = diffAgainst(payload);
+  const semMismatch = payload.semester && payload.semester !== CALENDAR.semester;
+  const displacing = S.semester && payload.semester && S.semester !== payload.semester;
+  let h = '<div class="card"><h3>Before anything is written</h3>';
+  h += '<p class="tiny muted">From '+esc(payload.app||'?')+', plan '+esc(payload.planName||'unnamed')+', exported '+esc((payload.exportedAt||'').slice(0,10))+'.</p>';
+  if(semMismatch) h += '<div class="banner bad"><b>Different semester</b>This file is for '+esc(payload.semester)+'; this build\'s calendar is '+CALENDAR.semester+'. No sessions will generate until the calendar matches.</div>';
+  if(displacing) h += '<div class="banner warn"><b>Your current profile will be archived</b>It is for '+esc(S.semester)+'. It is copied to <code>'+ARCHIVE_PRE+esc(S.semester)+'</code> and never mixed with the new one.</div>';
+  if(payload.skipped && payload.skipped.length) h += '<div class="banner warn"><b>'+payload.skipped.length+' course(s) were dropped by Bob before export</b>'+esc(payload.skipped.join(', '))+' - Bob\'s catalog no longer knows those codes.</div>';
+  h += '<table><tbody>';
+  h += '<tr><td>Unchanged</td><td>'+d.kept+' course(s)</td></tr>';
+  h += '<tr><td>Added</td><td>'+(d.added.length? esc(d.added.join(', ')) : 'none')+'</td></tr>';
+  h += '<tr><td>Removed</td><td>'+(d.removed.length ? d.removed.map(r => esc(r.code)+' <b>('+r.logged+' logged session'+(r.logged===1?'':'s')+' lost)</b>').join(', ') : 'none')+'</td></tr>';
+  h += '<tr><td>Section changed</td><td>'+(d.changed.length ? d.changed.map(c => esc(c.code)+' '+esc(c.moved.join(', '))+' <b>('+c.lost+' logged session'+(c.lost===1?'':'s')+' no longer match)</b>').join('<br>') : 'none')+'</td></tr>';
+  h += '</tbody></table>';
+  const risk = d.removed.reduce((a,r)=>a+r.logged,0) + d.changed.reduce((a,c)=>a+c.lost,0);
+  h += '<p class="'+(risk?'est':'muted')+'" style="margin-top:8px">'
+    + (risk ? risk+' logged session'+(risk===1?'':'s')+' would stop counting. The previous profile is kept under one undo.'
+            : 'No logged session is affected.')+'</p>';
+  h += '<button class="btn primary" id="imp-ok">Apply this import</button> <button class="btn" id="imp-cancel">Cancel</button></div>';
+  $('#imp-diff').innerHTML = h;
+}
+
+function applyImport(){
+  const p = PENDING; if(!p) return;
+  try{ localStorage.setItem(UNDO_KEY, JSON.stringify(S)); }catch(e){}
+  if(S.semester && p.semester && S.semester !== p.semester){
+    try{ localStorage.setItem(ARCHIVE_PRE + S.semester, JSON.stringify(S)); }catch(e){}
+  }
+  const fresh = S.semester && p.semester && S.semester !== p.semester;
+  if(fresh){ const keepTheme = S.theme; S = blank(); S.theme = keepTheme; }
+  S.semester = p.semester || null;
+  S.planName = p.planName || '';
+  S.exportedAt = p.exportedAt || null;
+  S.importedAt = new Date().toISOString();
+  S.courses = (p.courses||[]).map(c => ({ code:c.code, title:c.title, credits:c.credits,
+                                          sections:c.sections||{}, meetings:c.meetings||[] }));
+  // Logs are never pruned to match the new timetable. A session whose id no
+  // longer generates simply stops counting; if the section moves back, it
+  // counts again. Deleting it here is the silent data loss A2 is about.
+  save(); invalidate(); PENDING = null;
+  view = 'courses'; render();
+  toast('Imported ' + S.courses.length + ' courses. Undo is available on the Data tab.');
+}
+
+function download(obj, name){
+  const b = new Blob([JSON.stringify(obj, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(b); a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+}
+
+// --- Events ----------------------------------------------------------------
+
+function timeToMin(v){ const p = String(v).split(':'); return (+p[0])*60 + (+p[1]); }
+
+document.addEventListener('click', function(e){
+  const t = e.target.closest('[data-tab],[data-go],[data-sid],[data-week],[data-flip],[data-ed],[data-rmex],[data-arch],button');
+  if(!t) return;
+  const d = t.dataset;
+
+  if(d.tab){ view = d.tab; render(); return; }
+  if(d.go){ view = d.go; render(); return; }
+  if(t.id === 'theme-btn'){
+    S.theme = (document.documentElement.getAttribute('data-theme') === 'dark') ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', S.theme); save(); return;
+  }
+  if(d.sid){ cycle(d.sid); render(); return; }
+  if(d.week !== undefined){
+    const mon = S.week || weekMonday(today());
+    S.week = d.week === '0' ? weekMonday(today()) : addDays(mon, d.week === '1' ? 7 : -7);
+    save(); render(); return;
+  }
+  if(d.flip){ setMark(d.flip, d.to); render(); return; }
+  if(d.rmex !== undefined){ S.extras.splice(+d.rmex, 1); save(); render(); return; }
+  if(d.ed){ edCycle(d.ed); render(); return; }
+  if(d.arch){ try{ download(JSON.parse(localStorage.getItem(d.arch)), d.arch+'.json'); }catch(err){ msg('#bk-msg','That archive could not be read.','err'); } return; }
+
+  switch(t.id){
+    case 'ex-add': {
+      const code = $('#ex-code').value, date = $('#ex-date').value;
+      const st = timeToMin($('#ex-start').value), en = timeToMin($('#ex-end').value);
+      if(!code || !date || !($('#ex-start').value) || !($('#ex-end').value)) return msg('#ex-msg','Fill in the course, the date and both times.','err');
+      if(!(en > st)) return msg('#ex-msg','The end time has to be after the start time.','err');
+      if(date < CALENDAR.start || date > CALENDAR.end) return msg('#ex-msg','That date is outside the semester ('+CALENDAR.start+' to '+CALENDAR.end+'), so it would never appear.','err');
+      S.extras.push({code, date, start:st, end:en});
+      save(); render(); toast('Added a '+h1(contactHours(st,en))+'h extra class for '+code+'.');
+      return;
+    }
+    case 'ed-reset': edInit(); render(); return;
+    case 'ed-copy': {
+      const txt = edConstant();
+      const done = () => { const m = $('#ed-msg'); if(m) m.textContent = 'Copied. Paste it over the CALENDAR block in this file.'; };
+      if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done, selectOut);
+      else selectOut();
+      return;
+    }
+    case 'imp-ok': applyImport(); return;
+    case 'imp-cancel': PENDING = null; $('#imp-diff').innerHTML = ''; msg('#imp-msg','Cancelled. Nothing was written.'); return;
+    case 'undo-btn': {
+      const raw = localStorage.getItem(UNDO_KEY);
+      if(!raw) return;
+      try{ S = migrate(JSON.parse(raw)); }catch(err){ return msg('#bk-msg','The undo snapshot could not be read.','err'); }
+      localStorage.removeItem(UNDO_KEY); save(); render(); toast('Restored the profile from before the last import.');
+      return;
+    }
+    case 'bk-btn': download({kind:'atten-backup', v:SCHEMA_VERSION, savedAt:new Date().toISOString(), profile:S},
+                            'attendance-backup-'+today()+'.json'); return;
+    case 'wipe-btn': {
+      if(t.dataset.armed){ localStorage.removeItem(STORE_KEY); S = blank(); save(); render(); toast('Cleared.'); return; }
+      t.dataset.armed = '1'; t.textContent = 'Click again to clear everything';
+      $('#wipe-msg').textContent = 'This removes every logged session. Cancel by leaving this tab.';
+      return;
+    }
+  }
+});
+function selectOut(){
+  const pre = $('#ed-out'); if(!pre) return;
+  const r = document.createRange(); r.selectNodeContents(pre);
+  const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+  const m = $('#ed-msg'); if(m) m.textContent = 'Selected - press Ctrl+C to copy.';
+}
+
+document.addEventListener('change', function(e){
+  const d = e.target.dataset;
+  if(d.thr){
+    const v = Number(e.target.value);
+    if(!(v > 0 && v <= 100)) return;
+    S.thresholds[d.thr] = v/100; save(); render(); return;
+  }
+  if(d.off !== undefined && d.off){
+    const v = e.target.value;
+    if(v === '') delete S.official[d.off]; else S.official[d.off] = Number(v);
+    save(); render(); return;
+  }
+  if(e.target.id === 'ed-start'){ ED.start = e.target.value; render(); return; }
+  if(e.target.id === 'ed-end'){ ED.end = e.target.value; render(); return; }
+  if(e.target.id === 'ed-hb'){ ED.halfBoundary = e.target.value; render(); return; }
+  if(e.target.id === 'imp-file'){
+    const f = e.target.files[0]; if(!f) return;
+    readJSON(f).then(data => {
+      if(!data || data.kind !== 'bob-attendance')
+        return msg('#imp-msg','That file is not a Bob attendance export. It says kind "'+(data && data.kind ? data.kind : 'nothing')+'"; this app needs "bob-attendance". A plain bob-plan export will not do - it carries no meeting times.','err');
+      if(!Array.isArray(data.courses)) return msg('#imp-msg','That export has no courses array in it.','err');
+      msg('#imp-msg','Read '+data.courses.length+' course(s). Nothing has been written yet.');
+      showDiff(data);
+    }, err => msg('#imp-msg','Could not read that file: '+err.message+'.','err'));
+    return;
+  }
+  if(e.target.id === 'rs-file'){
+    const f = e.target.files[0]; if(!f) return;
+    readJSON(f).then(data => {
+      const prof = data && data.kind === 'atten-backup' ? data.profile : data;
+      if(!prof || !Array.isArray(prof.courses)) return msg('#bk-msg','That is not an attendance backup.','err');
+      try{ localStorage.setItem(UNDO_KEY, JSON.stringify(S)); }catch(err){}
+      S = migrate(prof); save(); render();
+      toast('Restored '+S.courses.length+' courses and '+Object.keys(S.log).length+' logged sessions.');
+    }, err => msg('#bk-msg','Could not read that file: '+err.message+'.','err'));
+  }
+});
+
+// --- Boot ------------------------------------------------------------------
+
+load();
+document.documentElement.setAttribute('data-theme',
+  S.theme || (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+render();
+
+if('serviceWorker' in navigator && location.protocol.indexOf('http') === 0)
+  navigator.serviceWorker.register('sw.js').catch(function(){});
+
+// Exposed for the verification harness, not for the page. Everything the UI
+// does goes through a real click; these are read-only handles onto the maths.
+window.Atten = { CALENDAR, sessions, stats, stateLine, contactHours, diffAgainst,
+                 state: () => S, render, save, blank };
+})();
+</script>
+</body>
+</html>

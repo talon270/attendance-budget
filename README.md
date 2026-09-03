@@ -1,0 +1,118 @@
+# Attendance budget
+
+Answers one question, on screen at load: **how much class can I still miss?**
+It reads the timetable you already built in Bob the Builder, expands it against
+a hardcoded semester calendar into dated sessions, prices each one in contact
+hours, and reports the hours of leave you have left per course. Everything is
+stored in your browser under one key. No account, no server, no network call.
+
+There is no course data in this file. Bob's `Export for attendance` button is
+the only way a timetable gets in, which is why this app can never disagree with
+Bob about when a class meets.
+
+Live at **https://talon270.github.io/attendance-budget/** — or clone it and
+open `index.html` from your filesystem. Both work identically; the hosted copy
+just also installs as an app and caches itself for offline use.
+
+## How to run it
+
+```
+# open it, that's the whole setup
+xdg-open index.html
+```
+
+Then: Bob the Builder → the plan you are actually enrolled in → **Export for
+attendance** → the Data tab here → load the file.
+
+Deployment is GitHub Pages serving this repository's root — there is no build
+step, no bundler and no generated directory, so what is in the repo is exactly
+what is served. Any other static host works the same way: `npx wrangler pages
+deploy .` puts it on Cloudflare with no changes.
+
+## The tabs
+
+| Tab | What it does |
+|---|---|
+| Courses | Every course, its percentage, its remaining leave, and the sentence that says what to do about it |
+| Week | The timetable as a grid. Click a class to cycle it attended → absent → cancelled. Add a make-up class from the form underneath |
+| Reconcile | Type what the official record says; the app reports the gap and lists sessions you could flip. It never flips one itself |
+| Calendar | Author the semester — term dates, holidays, and the days that run another day's timetable — and copy the constant back into this file |
+| Data | Import (as a diff), undo the last import, backup, restore, clear |
+
+## The things most attendance trackers get wrong
+
+**A tracker must never tell you that you have leave you do not have.** That is
+the one failure this app is designed around, and every rounding decision breaks
+the same way. A budget of 9.75 hours prints as **9.7h**, never 9.8h. A
+percentage of 74.99% prints as **74.9%**, never 75.0%. A shortfall of 0.41h
+prints as **0.5h short**, never 0.4h. Each of those roundings costs you a tenth
+of an hour you would not have missed anyway; the opposite rounding costs you the
+course.
+
+**The session count is floored against the longest class still to come, not the
+average one.** ECO354 meets Mon/Wed/Fri for 55 minutes, 39 sessions survive the
+calendar, so the semester total is 39.0h. At a 75% bar you must attend 29.25h,
+leaving 9.75h of budget. That displays as **9 classes, not 10** — missing ten
+1.0h classes leaves 29.0h attended, which is 74.4% and a fail. The hours figure
+is exact; the class-equivalent is the conservative reading of it.
+
+**An import is a diff, never a replace.** Change a section in Bob, re-export,
+and a naive importer silently drops the sessions whose keys no longer resolve —
+taking months of logged absences with them. Here, loading a file writes nothing.
+It shows you the courses added, the courses removed *and how many logged
+sessions each one holds*, and the sections that moved *and how many logged
+sessions no longer match*. You confirm, and the previous profile is kept under
+one undo. Logged sessions are never pruned to match a new timetable: a session
+whose id stops generating just stops counting, and counts again if the section
+moves back.
+
+**Cancelled is a third state, not an absence you forgive.** A cancelled class
+leaves both sides of the fraction — it is removed from what was held, from the
+semester total, and from any absence logged against it. Marking it absent-but-
+excused would quietly shrink your denominator and inflate every later
+percentage.
+
+**The percentage is undefined before the first class, and says so.** It shows
+"No classes held yet", not 100%. The budget, though, is arithmetic on the
+calendar alone, so it is shown from day one.
+
+**When a course can no longer be saved, it says that instead of showing a
+budget.** If attending every remaining hour still leaves you under the bar, a
+budget figure is a fiction. The line says the course cannot be recovered by
+attendance alone.
+
+**Reconcile reports; it never adjusts.** The official record is the authority
+and this app is not, so it computes the gap, lists candidate sessions most
+recent first — a forgotten log is far more common than a false absence — and
+waits for your click. An app that silently edited itself to match a number you
+typed would launder a typo into a budget you then trust.
+
+**No `alert()`, no `confirm()`, anywhere.** Every refusal is an inline message
+naming what went wrong. Loading a plain `bob-plan` export tells you it got
+`bob-plan` and needs `bob-attendance`, and why: a plan export carries section
+keys but no meeting times.
+
+## What is solid and what is assumed
+
+| Solid | Assumed |
+|---|---|
+| Contact hours. Verified against all 1068 meetings in `new_timetable.json`: nine distinct durations, `round(min/60*2)/2` maps every one unambiguously | **The semester calendar.** Term start, term end, the half-semester boundary and the holiday list are a placeholder, flagged `provisional: true`, and the app says so in a banner it will not let you dismiss |
+| Saturday teaches. 28 meetings are scheduled on Saturdays; Sunday has none | Half-semester courses. 1066 of 1068 meetings are `Full semester` and none are tagged second-half, so that path is verified against a synthetic fixture only |
+| The arithmetic. 61 assertions, driven by real clicks | The 75% bar. It is the usual Ashoka figure, editable per course where a syllabus sets its own |
+
+The provisional banner goes away when you author the real calendar in the
+Calendar tab and paste its constant over the `CALENDAR` block at the top of
+`index.html`'s script. The editor deliberately writes to your clipboard and not
+to storage: a calendar saved in one browser would leave every other copy of the
+app with an empty one.
+
+## Data and privacy
+
+One key, `atten.v1`, holds the whole profile — courses, every logged session,
+extras, per-course bars, reconcile figures. `atten.undo` holds the profile from
+before the last import. `atten.archive.<semester>` holds a displaced term, kept
+and never mixed in. Nothing else is written, and the `atten.` prefix exists
+because Bob and this app share one `file://` origin.
+
+Backup and restore round-trip the whole profile as JSON. Nothing is transmitted
+anywhere; `sw.js` caches only same-origin files, and there is no CDN to cache.
