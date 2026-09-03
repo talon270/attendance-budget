@@ -212,3 +212,13 @@ because Bob and this app share one `file://` origin.
 
 Backup and restore round-trip the whole profile as JSON. Nothing is transmitted
 anywhere; `sw.js` caches only same-origin files, and there is no CDN to cache.
+
+**The service worker is network-first for the page and cache-first for the rest.**
+That split is deliberate and was learned the hard way. The whole app is one HTML
+file, so caching it first meant a returning visitor stayed pinned to whichever
+version they happened to load first — deploying a fix changed nothing for the
+people who already had the bug, and the only escape was clearing site data.
+Bumping the cache name by hand on each deploy would have worked until the first
+time it was forgotten. Now the page is fetched from the network with the cache
+as the fallback, so it still opens on a plane, and the icon and manifest stay
+cache-first because they are tiny and versionless.
