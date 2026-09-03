@@ -10,6 +10,32 @@
 <meta name="theme-color" content="#1d2021">
 <style>
 /* ==========================================================================
+   ATTENDANCE BUDGET · TYPE
+   --------------------------------------------------------------------------
+   JetBrains Mono, everywhere. local() comes first in every src, so on a machine
+   that already has the Nerd Font installed nothing is downloaded at all and you
+   get the real patched build - the same face as the terminal.
+   Everywhere else a subset falls back: 5KB per weight, cut from the 2.5MB
+   originals down to the glyphs this app actually draws. Those subsets carry no
+   Nerd icon glyphs, deliberately. Nothing here draws one, and shipping the
+   patched build would mean redistributing Font Awesome, Devicons, Octicons,
+   Powerline and the rest for characters the app never uses.
+   Self-hosted, never a CDN. This app has to open with the network off.
+   ========================================================================== */
+@font-face{font-family:'JetBrains Mono'; font-style:normal; font-weight:400; font-display:swap;
+  src:local('JetBrainsMono Nerd Font'),local('JetBrainsMonoNerdFont-Regular'),local('JetBrains Mono'),
+      url('fonts/jetbrains-mono-400.woff2') format('woff2');}
+@font-face{font-family:'JetBrains Mono'; font-style:normal; font-weight:500; font-display:swap;
+  src:local('JetBrainsMono NF Medium'),local('JetBrainsMonoNerdFont-Medium'),local('JetBrains Mono Medium'),
+      url('fonts/jetbrains-mono-500.woff2') format('woff2');}
+@font-face{font-family:'JetBrains Mono'; font-style:normal; font-weight:600; font-display:swap;
+  src:local('JetBrainsMono NF SemiBold'),local('JetBrainsMonoNerdFont-SemiBold'),local('JetBrains Mono SemiBold'),
+      url('fonts/jetbrains-mono-600.woff2') format('woff2');}
+@font-face{font-family:'JetBrains Mono'; font-style:normal; font-weight:700; font-display:swap;
+  src:local('JetBrainsMono NF Bold'),local('JetBrainsMonoNerdFont-Bold'),local('JetBrains Mono Bold'),
+      url('fonts/jetbrains-mono-700.woff2') format('woff2');}
+
+/* ==========================================================================
    ATTENDANCE BUDGET · STYLE
    --------------------------------------------------------------------------
    · Dark-first. The dark palette is defined on :root and light is derived
@@ -17,12 +43,12 @@
    · One accent, a muted blue, used only for interactive things - focus, the
      active tab, links. Green/amber/red are never decoration: they mean
      safe / close to the bar / under it, and nothing else may borrow them.
-   · Editorial: a serif carries the numbers, hairline rules do the dividing,
-     and shadows are almost absent. Whitespace separates, not boxes.
+   · Editorial in layout, monospaced in voice: hairline rules do the dividing,
+     shadows are almost absent, whitespace separates rather than boxes. Every
+     measure is set in ch and every size stepped down from the proportional
+     type it replaced, because mono runs perceptibly wider at the same px.
    · Adaptive by layout, not by squeezing: one stacked column on a phone, a
      two-column page with a settings rail from 1080px.
-   No webfont. Nothing loads from a network, ever - that is the whole point of
-   this app - so the type is a system stack chosen for its serif.
    ========================================================================== */
 
 :root{
@@ -38,9 +64,10 @@
   --shadow:0 1px 2px rgba(0,0,0,.5), 0 8px 28px -12px rgba(0,0,0,.7);
   --grain:.045;
 
-  --serif:ui-serif,"Iowan Old Style","Source Serif 4","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
-  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  /* One family. Three names kept so every rule below still reads as the role
+     it plays rather than as one font name repeated ninety times. */
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --sans:var(--mono); --serif:var(--mono);
 
   --r-lg:14px; --r-md:10px; --r-sm:7px;
   --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px;
@@ -63,7 +90,7 @@ html{ -webkit-text-size-adjust:100%; scroll-behavior:smooth }
 @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto} }
 body{
   margin:0; background:var(--bg); color:var(--ink);
-  font:400 0.95rem/1.6 var(--sans);
+  font:400 0.885rem/1.62 var(--sans);
   font-synthesis-weight:none;
 }
 /* Grain. Flat dark surfaces read as dead pixels; a little tooth stops that.
@@ -77,9 +104,9 @@ body::after{
 
 h1,h2,h3{margin:0; font-weight:600; line-height:1.2; letter-spacing:-.01em}
 h1{font:600 1.02rem/1.2 var(--sans)}
-h2{font:500 .74rem/1.3 var(--sans); letter-spacing:.11em; text-transform:uppercase; color:var(--muted)}
+h2{font:500 .7rem/1.3 var(--sans); letter-spacing:.055em; text-transform:uppercase; color:var(--muted)}
 h3{font:600 1.02rem/1.25 var(--sans)}
-p{margin:0 0 var(--s3); max-width:68ch; text-wrap:pretty}
+p{margin:0 0 var(--s3); max-width:58ch; text-wrap:pretty}
 a{color:var(--accent); text-underline-offset:3px; text-decoration-thickness:1px}
 code,pre{font-family:var(--mono); font-size:.88em}
 :focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:3px}
@@ -119,7 +146,7 @@ nav.tabs button[aria-current="page"]::after{transform:scaleX(1)}
 
 main{padding:var(--s5) 0 var(--s7)}
 footer.bot{border-top:1px solid var(--line); color:var(--muted); font-size:.78rem; padding:var(--s5) 0 var(--s7)}
-footer.bot .wrap{max-width:70ch}
+footer.bot p{margin:0}
 
 /* ---------- controls ---------- */
 button,select,input,textarea{font:inherit; color:inherit}
@@ -142,8 +169,8 @@ input[type=text],input[type=date],input[type=time],input[type=number],select,tex
   transition:border-color .16s ease;
 }
 input:hover,select:hover{border-color:var(--muted)}
-label.field{display:flex; flex-direction:column; gap:5px; font:500 .72rem/1 var(--sans);
-  letter-spacing:.06em; text-transform:uppercase; color:var(--muted)}
+label.field{display:flex; flex-direction:column; gap:5px; font:500 .68rem/1 var(--sans);
+  letter-spacing:.03em; text-transform:uppercase; color:var(--muted)}
 label.field > *{text-transform:none; letter-spacing:0; font-size:.95rem; font-weight:400}
 
 .card{background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg);
@@ -161,7 +188,7 @@ label.field > *{text-transform:none; letter-spacing:0; font-size:.95rem; font-we
    wrong. A tidy page is not worth a student failing a bar this app told them
    they had room under. */
 .banner{border-radius:var(--r-md); padding:var(--s3) var(--s4); margin:0 0 var(--s3);
-  border:1px solid; border-left-width:3px; font-size:.86rem; line-height:1.55; max-width:78ch}
+  border:1px solid; border-left-width:3px; font-size:.82rem; line-height:1.6; max-width:64ch}
 .banner b{display:block; font-weight:600; margin-bottom:2px; font-size:.9rem}
 .banner.warn{background:var(--warn-soft); border-color:var(--warn); color:var(--ink)}
 .banner.bad{background:var(--bad-soft); border-color:var(--bad); color:var(--ink)}
@@ -171,13 +198,13 @@ label.field > *{text-transform:none; letter-spacing:0; font-size:.95rem; font-we
   padding:var(--s5) var(--s5) var(--s4); margin:0 0 var(--s5); box-shadow:var(--shadow); position:relative; overflow:hidden}
 .hero::before{content:""; position:absolute; inset:0 auto 0 0; width:3px; background:var(--accent)}
 .hero.safe::before{background:var(--ok)} .hero.close::before{background:var(--warn)} .hero.over::before{background:var(--bad)}
-.hero-k{font:500 .72rem/1 var(--sans); letter-spacing:.13em; text-transform:uppercase; color:var(--muted)}
+.hero-k{font:500 .7rem/1 var(--sans); letter-spacing:.07em; text-transform:uppercase; color:var(--muted)}
 .hero-when{color:var(--ink-2); font-weight:500; letter-spacing:0; text-transform:none; font-size:.8rem}
-.hero-code{font:600 clamp(1.6rem,4.4vw,2.15rem)/1.1 var(--serif); letter-spacing:-.015em; margin:var(--s3) 0 2px}
-.hero-title{color:var(--ink-2); font-size:.95rem; margin:0 0 var(--s3); max-width:46ch}
+.hero-code{font:700 clamp(1.45rem,4vw,1.95rem)/1.1 var(--serif); letter-spacing:-.035em; margin:var(--s3) 0 2px}
+.hero-title{color:var(--ink-2); font-size:.9rem; margin:0 0 var(--s3); max-width:42ch}
 .hero-meta{font-family:var(--mono); font-size:.83rem; color:var(--muted); margin-bottom:var(--s4)}
-.hero-cost{font-size:1.02rem; line-height:1.55; margin:0 0 var(--s4); max-width:52ch}
-.hero-cost b{font-family:var(--serif); font-weight:600; font-variant-numeric:tabular-nums; font-size:1.18em}
+.hero-cost{font-size:.96rem; line-height:1.6; margin:0 0 var(--s4); max-width:46ch}
+.hero-cost b{font-weight:700; color:var(--ink)}
 .hero-actions{display:flex; gap:var(--s2); flex-wrap:wrap; padding-top:var(--s3); border-top:1px solid var(--line)}
 .hero-none{color:var(--ink-2)}
 
@@ -198,18 +225,18 @@ label.field > *{text-transform:none; letter-spacing:0; font-size:.95rem; font-we
 .course .code{font:600 1.05rem/1.2 var(--sans); letter-spacing:-.01em}
 .course .ttl{color:var(--muted); font-size:.86rem; font-weight:400}
 .course .pct{grid-column:2; grid-row:1 / span 2; align-self:center; text-align:right;
-  font:600 clamp(1.75rem,4.6vw,2.4rem)/1 var(--serif); letter-spacing:-.02em; color:var(--ink)}
+  font:700 clamp(1.5rem,4.2vw,2.05rem)/1 var(--serif); letter-spacing:-.04em; color:var(--ink)}
 .course.safe .pct{color:var(--ok)} .course.close .pct{color:var(--warn)} .course.over .pct{color:var(--bad)}
 .course.none .pct{font-size:1rem; color:var(--muted); font-family:var(--sans); font-weight:500}
-.course .line{grid-column:1; font-size:.88rem; color:var(--ink-2); line-height:1.5; max-width:56ch}
+.course .line{grid-column:1; font-size:.83rem; color:var(--ink-2); line-height:1.55; max-width:50ch}
 .course .sub{grid-column:1 / -1; font-family:var(--mono); font-size:.75rem; color:var(--muted);
   padding-top:var(--s2); border-top:1px solid var(--line)}
 @media (max-width:520px){
   .course{grid-template-columns:1fr}
   .course .pct{grid-column:1; grid-row:auto; text-align:left}
 }
-.pill{display:inline-block; border-radius:3px; padding:2px 7px; font:600 .68rem/1.4 var(--sans);
-  letter-spacing:.07em; text-transform:uppercase; border:1px solid; vertical-align:2px}
+.pill{display:inline-block; border-radius:3px; padding:2px 7px; font:700 .64rem/1.4 var(--sans);
+  letter-spacing:.03em; text-transform:uppercase; border:1px solid; vertical-align:2px}
 .pill.safe{color:var(--ok); border-color:color-mix(in srgb,var(--ok) 45%,transparent); background:var(--ok-soft)}
 .pill.close{color:var(--warn); border-color:color-mix(in srgb,var(--warn) 45%,transparent); background:var(--warn-soft)}
 .pill.over{color:var(--bad); border-color:color-mix(in srgb,var(--bad) 45%,transparent); background:var(--bad-soft)}
@@ -240,7 +267,7 @@ label.field > *{text-transform:none; letter-spacing:0; font-size:.95rem; font-we
 .gridhead{display:grid; grid-template-columns:56px repeat(6,minmax(116px,1fr));
   border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--surface); z-index:2}
 .gridhead div{padding:9px 6px; font:600 .76rem/1.3 var(--sans); text-align:center; color:var(--muted);
-  letter-spacing:.05em; text-transform:uppercase}
+  letter-spacing:.02em; text-transform:uppercase}
 .gridhead div span{display:block; font:400 .8rem/1.3 var(--mono); letter-spacing:0; text-transform:none}
 .gridhead div.today{color:var(--accent)}
 .gridbody{display:grid; grid-template-columns:56px repeat(6,minmax(116px,1fr)); position:relative}
@@ -256,7 +283,7 @@ label.field > *{text-transform:none; letter-spacing:0; font-size:.95rem; font-we
 }
 .blk:hover{filter:brightness(1.12)} .blk:active{transform:scale(.985)}
 .blk b{display:block; font:600 .82rem/1.25 var(--sans); letter-spacing:-.01em}
-.blk .tag{display:block; font:600 .62rem/1.4 var(--sans); letter-spacing:.09em; text-transform:uppercase; opacity:.85}
+.blk .tag{display:block; font:600 .6rem/1.4 var(--sans); letter-spacing:.04em; text-transform:uppercase; opacity:.85}
 .blk.attended{background:var(--ok-soft); border-color:var(--ok); color:var(--ink)}
 .blk.absent{background:var(--bad-soft); border-color:var(--bad); color:var(--ink)}
 .blk.cancelled{background:var(--bg-2); border-color:var(--line-2); color:var(--muted); text-decoration:line-through}
@@ -271,7 +298,7 @@ label.field > *{text-transform:none; letter-spacing:0; font-size:.95rem; font-we
 .month h3{font:600 .84rem/1.2 var(--sans); text-align:center; margin-bottom:var(--s2);
   letter-spacing:.04em; color:var(--ink-2)}
 .mgrid{display:grid; grid-template-columns:repeat(7,1fr); gap:3px}
-.mgrid .dow{font:600 .64rem/1.6 var(--sans); text-align:center; color:var(--muted); letter-spacing:.06em}
+.mgrid .dow{font:600 .62rem/1.6 var(--sans); text-align:center; color:var(--muted); letter-spacing:0}
 .mgrid button{
   aspect-ratio:1; border:1px solid var(--line); border-radius:var(--r-sm); background:var(--bg-2);
   font:400 .76rem/1 var(--mono); cursor:pointer; padding:0; display:flex; flex-direction:column;
@@ -291,7 +318,7 @@ pre.out{background:var(--bg-2); border:1px solid var(--line); border-radius:var(
 table{border-collapse:collapse; width:100%; font-size:.86rem}
 th,td{text-align:left; padding:8px 10px; border-bottom:1px solid var(--line)}
 tbody tr:last-child td{border-bottom:0}
-th{font:600 .68rem/1.4 var(--sans); color:var(--muted); text-transform:uppercase; letter-spacing:.09em}
+th{font:600 .66rem/1.4 var(--sans); color:var(--muted); text-transform:uppercase; letter-spacing:.045em}
 td.num,th.num{text-align:right; font-variant-numeric:tabular-nums; font-family:var(--mono); font-size:.82rem}
 th.num{font-family:var(--sans)}
 .tablewrap{overflow-x:auto; margin-inline:calc(var(--s4) * -1); padding-inline:var(--s4)}
@@ -299,12 +326,12 @@ th.num{font-family:var(--sans)}
 /* ---------- states ---------- */
 .empty{text-align:center; padding:var(--s7) var(--s4); max-width:56ch; margin-inline:auto}
 .empty h2{color:var(--ink); text-transform:none; letter-spacing:-.015em;
-  font:600 clamp(1.5rem,4.5vw,2rem)/1.15 var(--serif); margin-bottom:var(--s3)}
+  font:700 clamp(1.3rem,4vw,1.7rem)/1.2 var(--serif); letter-spacing:-.03em; margin-bottom:var(--s3)}
 .steps{text-align:left; margin:var(--s5) auto 0; padding-left:1.3em; color:var(--ink-2)}
 .steps li{margin-bottom:var(--s3); padding-left:.2em}
 .steps li::marker{color:var(--muted); font-family:var(--mono); font-size:.85em}
 .msg{border-radius:var(--r-sm); padding:9px 13px; font-size:.85rem; margin:var(--s3) 0;
-  border:1px solid; border-left-width:3px; max-width:70ch}
+  border:1px solid; border-left-width:3px; max-width:60ch}
 .msg.err{background:var(--bad-soft); border-color:var(--bad)}
 .msg.ok{background:var(--ok-soft); border-color:var(--ok)}
 
@@ -649,9 +676,9 @@ function render(){
     view === 'week'      ? weekView() :
     view === 'reconcile' ? reconcileView() :
     view === 'calendar'  ? calendarView() : dataView();
-  $('#foot').innerHTML = 'Everything is stored in this browser under <code>atten.v1</code>. No account, no server, no network. '
+  $('#foot').innerHTML = '<p>Everything is stored in this browser under <code>atten.v1</code>. No account, no server, no network. '
     + (S.importedAt ? 'Timetable imported ' + esc(S.importedAt.slice(0,10)) + '. ' : '')
-    + 'Calendar authored ' + CALENDAR.authored + (CALENDAR.source ? ' from ' + CALENDAR.source + '.' : '.');
+    + 'Calendar authored ' + CALENDAR.authored + (CALENDAR.source ? ' from ' + CALENDAR.source + '.' : '.') + '</p>';
 }
 
 function emptyView(){

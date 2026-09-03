@@ -51,11 +51,22 @@ active tab, the progress bar. Green, amber and red are never decoration: they
 mean safe, close to the bar, and under it. Nothing else is allowed to borrow
 them, so a red edge in the corner of your eye always means the same thing.
 
-**A serif carries the numbers.** The percentages and the course code in the hero
-are set in a system serif with tabular figures. A 2.4rem percentage in a UI sans
-reads like an error dialog; in a serif it reads like a figure worth trusting.
-Nothing is downloaded — no webfont, no CDN, because the app has to open with the
-network off.
+**JetBrains Mono, everywhere, self-hosted.** `local()` comes first in every
+`@font-face`, so a machine that already has the Nerd Font installed downloads
+nothing at all and gets the real patched build — the same face as your terminal.
+Everywhere else, a subset falls back: **5KB per weight**, cut from the 2.5MB
+originals down to the glyphs this app actually draws, four weights for 20KB
+total. Never a CDN; the fonts are cached with the app shell so it opens in its
+own face offline.
+
+The shipped subsets carry **no Nerd icon glyphs**, deliberately. Nothing here
+draws one, and shipping the patched build would mean redistributing Font
+Awesome, Devicons, Octicons, Powerline and the rest for characters the app never
+uses. On your own machine that distinction is invisible — `local()` wins and you
+get the full Nerd Font.
+
+Every measure is set in `ch` and every size stepped down from the proportional
+type it replaced, because mono runs perceptibly wider at the same pixel size.
 
 **Adaptive by layout, not by squeezing.** On a phone it is one stacked column
 and the percentage drops below the course code. From 1080px it becomes two

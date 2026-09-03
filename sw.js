@@ -16,7 +16,11 @@
  */
 "use strict";
 const CACHE = 'atten-v2';   // v2 purges every v1 cache pinned to the old page
-const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon.svg'];
+const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon.svg',
+  // 20KB of subset type. Cached with the shell so the app opens in its own
+  // face offline rather than falling back to the system mono.
+  './fonts/jetbrains-mono-400.woff2', './fonts/jetbrains-mono-500.woff2',
+  './fonts/jetbrains-mono-600.woff2', './fonts/jetbrains-mono-700.woff2'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
