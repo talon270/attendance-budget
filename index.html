@@ -7,7 +7,19 @@
 <meta name="description" content="How much class you can still miss. Offline, private, no account.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
-<meta name="theme-color" content="#1d2021">
+<meta name="theme-color" content="#020203">
+<script>
+/* Stamped before the body parses, so a returning visitor's palette is the
+   first paint rather than a flash of the default. It reads the same key the
+   app writes and understands the two values the old build stored. */
+(function(){try{
+  var ok = {monolith:1, mariana:1, porcelain:1, ink:1};
+  var t  = (JSON.parse(localStorage.getItem('atten.v1')) || {}).theme;
+  if(!ok[t]) t = (t === 'light') ? 'porcelain' : (t === 'dark') ? 'monolith'
+    : (window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches ? 'porcelain' : 'monolith');
+  document.documentElement.setAttribute('data-palette', t);
+}catch(e){}})();
+</script>
 <style>
 /* ==========================================================================
    ATTENDANCE BUDGET · TYPE
@@ -38,9 +50,11 @@
 /* ==========================================================================
    ATTENDANCE BUDGET · STYLE
    --------------------------------------------------------------------------
-   · Dark-first. The dark palette is defined on :root and light is derived
-     from it, because dark is the one that gets read at 8am in a corridor.
-   · One accent, a muted blue, used only for interactive things - focus, the
+   · Four palettes, two dark and two light, each a complete token set rather
+     than one derived from another. They are ported from the Study Tracker's
+     twenty-six, and the four were picked by a rule, not by taste - see the
+     comment above the palette blocks.
+   · One accent per palette, used only for interactive things - focus, the
      active tab, links. Green/amber/red are never decoration: they mean
      safe / close to the bar / under it, and nothing else may borrow them.
    · Editorial in layout, monospaced in voice: hairline rules do the dividing,
@@ -52,16 +66,17 @@
    ========================================================================== */
 
 :root{
+  /* Monolith, so the very first paint is a real palette rather than a flash of
+     browser defaults. The head script restamps it from storage before the body
+     parses; the media query below covers a light system for a first-time
+     visitor who has never chosen. */
   color-scheme: dark;
-  /* Warm near-black rather than #000: pure black on an OLED phone at night
-     makes the hairline rules disappear entirely. */
-  --bg:#141310; --bg-2:#1a1815; --surface:#1e1b18; --surface-2:#252220;
-  --ink:#ebe5d9; --ink-2:#b3aba0; --muted:#877f74;
-  --line:#2b2823; --line-2:#3a3630;
-  --accent:#8aa3c4; --accent-ink:#141310; --accent-soft:#22303f;
-  --ok:#93b17c; --warn:#d8a44a; --bad:#d2705a;
-  --ok-soft:#1e2a1b; --warn-soft:#2e2517; --bad-soft:#2e1d19;
-  --shadow:0 1px 2px rgba(0,0,0,.5), 0 8px 28px -12px rgba(0,0,0,.7);
+  --bg:#020203; --bg-2:#050608; --surface:#0D1117; --surface-2:#1E2022;
+  --ink:#F3F5F6; --ink-2:#ECEFF1; --muted:#9098A8;
+  --line:#26282B; --line-2:#363738;
+  --accent:#9FA8DA; --accent-ink:#FFFFFF;
+  --ok:#46C98F; --warn:#D9A441; --bad:#E5705C;
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 8px 22px -10px rgba(0,0,0,.62);
   --grain:.045;
 
   /* One family, one name. It was three - --sans and --serif aliased to the
@@ -74,16 +89,77 @@
   --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px;
   --z-nav:20; --z-head:30; --z-grain:100;
 }
-html[data-theme="light"]{
+@media (prefers-color-scheme: light){
+  :root:not([data-palette]){
+    color-scheme: light;
+    --bg:#E8EBEE; --bg-2:#E9ECF1; --surface:#FFFFFF; --surface-2:#F2F4F7;
+    --ink:#14171F; --ink-2:#1E2430; --muted:#5C6675;
+    --line:#DCE1E8; --line-2:#B2B7C0;
+    --accent:#2563A8; --accent-ink:#FFFFFF;
+    --ok:#2F6B45; --warn:#8A5A0C; --bad:#A33A2A;
+    --shadow:0 1px 2px rgba(30,36,48,.05), 0 6px 18px -8px rgba(30,36,48,.15);
+    --grain:.022;
+  }
+}
+
+/* The four palettes. Ported verbatim from the Study Tracker's token set, which
+   holds twenty-six; these are the four whose accent does not land inside the
+   band --ok / --warn / --bad own. That constraint is not cosmetic. Green means
+   safe, amber means one absence from the bar and red means under it, and an
+   accent borrowing one of those makes the focus ring and the active tab read
+   as a verdict on your attendance. It rules out every warm palette in the
+   Study Tracker - paper's amber sits on --warn, linen's rust and akira's red
+   on --bad, meadow's and nostromo's green on --ok - which is why all four here
+   are cool. */
+:root[data-palette="monolith"]{
+  color-scheme: dark;
+  --bg:#020203; --bg-2:#050608; --surface:#0D1117; --surface-2:#1E2022;
+  --ink:#F3F5F6; --ink-2:#ECEFF1; --muted:#9098A8;
+  --line:#26282B; --line-2:#363738;
+  --accent:#9FA8DA; --accent-ink:#FFFFFF;
+  --ok:#46C98F; --warn:#D9A441; --bad:#E5705C;
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 8px 22px -10px rgba(0,0,0,.62);
+  --grain:.045;
+}
+:root[data-palette="mariana"]{
+  color-scheme: dark;
+  --bg:#010203; --bg-2:#030708; --surface:#0A1317; --surface-2:#1C2022;
+  --ink:#CDF2F7; --ink-2:#B2EBF2; --muted:#8090A8;
+  --line:#202A2F; --line-2:#343739;
+  --accent:#26C6DA; --accent-ink:#0B0B0B;
+  --ok:#46C98F; --warn:#D9A441; --bad:#E5705C;
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 8px 22px -10px rgba(0,0,0,.62);
+  --grain:.045;
+}
+:root[data-palette="porcelain"]{
   color-scheme: light;
-  --bg:#faf8f3; --bg-2:#f3f0e8; --surface:#ffffff; --surface-2:#f7f4ee;
-  --ink:#1b1814; --ink-2:#4c453c; --muted:#7e7669;
-  --line:#e6e0d4; --line-2:#d5cec0;
-  --accent:#3d5f8c; --accent-ink:#ffffff; --accent-soft:#e6edf6;
-  --ok:#4c7a3e; --warn:#96680f; --bad:#a8412c;
-  --ok-soft:#eaf1e5; --warn-soft:#f8efdc; --bad-soft:#f9e9e4;
-  --shadow:0 1px 2px rgba(60,50,35,.06), 0 10px 30px -16px rgba(60,50,35,.25);
-  --grain:.025;
+  --bg:#E8EBEE; --bg-2:#E9ECF1; --surface:#FFFFFF; --surface-2:#F2F4F7;
+  --ink:#14171F; --ink-2:#1E2430; --muted:#5C6675;
+  --line:#DCE1E8; --line-2:#B2B7C0;
+  --accent:#2563A8; --accent-ink:#FFFFFF;
+  --ok:#2F6B45; --warn:#8A5A0C; --bad:#A33A2A;
+  --shadow:0 1px 2px rgba(30,36,48,.05), 0 6px 18px -8px rgba(30,36,48,.15);
+  --grain:.022;
+}
+:root[data-palette="ink"]{
+  color-scheme: light;
+  --bg:#EAEAEE; --bg-2:#EAEAF0; --surface:#FDFDFF; --surface-2:#F4F4F7;
+  --ink:#121219; --ink-2:#1B1B26; --muted:#5B5B6B;
+  --line:#DEDEE6; --line-2:#B3B3BC;
+  --accent:#3B3F8F; --accent-ink:#FFFFFF;
+  --ok:#2F6B45; --warn:#8A5A0C; --bad:#A33A2A;
+  --shadow:0 1px 2px rgba(27,27,38,.05), 0 6px 18px -8px rgba(27,27,38,.15);
+  --grain:.022;
+}
+
+/* Derived, so a palette only ever declares the colour and never its washes.
+   A wash is the status colour mixed into the recessed surface, which keeps a
+   banner legible on a near-black ground and on a near-white one from the same
+   one line. */
+:root{
+  --ok-soft:color-mix(in srgb, var(--ok) 17%, var(--bg-2));
+  --warn-soft:color-mix(in srgb, var(--warn) 17%, var(--bg-2));
+  --bad-soft:color-mix(in srgb, var(--bad) 17%, var(--bg-2));
 }
 
 *,*::before,*::after{box-sizing:border-box}
@@ -121,6 +197,30 @@ code,pre{font-family:var(--mono); font-size:.88em}
 .skip{position:absolute; left:-9999px; top:0; background:var(--accent); color:var(--accent-ink);
   padding:var(--s2) var(--s4); border-radius:0 0 var(--r-sm) 0; z-index:200; font-weight:600}
 .skip:focus{left:0}
+
+/* ---------- palette picker ----------
+   Four palettes is too few to deserve a menu. Each swatch shows the two
+   colours that actually differ - the ground it paints and the accent it puts
+   on top - so the choice is made by looking rather than by reading a name.
+   The swatch colours are literals on purpose: they have to render the palette
+   they switch to, not the one currently applied. */
+.swatches{display:flex; align-items:center; gap:var(--s2)}
+.sw-set{display:flex; gap:5px}
+.sw{
+  width:24px; height:24px; padding:0; border-radius:8px; cursor:pointer; position:relative;
+  background:var(--sw-bg); border:1px solid var(--line-2);
+  transition:transform .14s ease, border-color .16s ease, box-shadow .16s ease;
+}
+.sw::after{content:""; position:absolute; inset:6px; border-radius:50%; background:var(--sw-ac)}
+.sw:hover{transform:translateY(-1px); border-color:var(--muted)}
+.sw[aria-checked="true"]{border-color:var(--accent);
+  box-shadow:0 0 0 2px color-mix(in srgb, var(--accent) 32%, transparent)}
+.sw[data-pal="monolith"]{--sw-bg:#050608; --sw-ac:#9FA8DA}
+.sw[data-pal="mariana"]{--sw-bg:#030708; --sw-ac:#26C6DA}
+.sw[data-pal="porcelain"]{--sw-bg:#F2F4F7; --sw-ac:#2563A8}
+.sw[data-pal="ink"]{--sw-bg:#F4F4F7; --sw-ac:#3B3F8F}
+.sw-name{font-size:.74rem; color:var(--muted); letter-spacing:.02em; min-width:8ch}
+@media (max-width:560px){ .sw-name{display:none} }
 
 /* ---------- chrome ---------- */
 header.top{position:sticky; top:0; z-index:var(--z-head); background:color-mix(in srgb, var(--bg) 88%, transparent);
@@ -472,7 +572,8 @@ th.num{font-family:var(--mono)}
 <header class="top">
   <div class="wrap">
     <div class="brand"><b>Attendance</b><small id="brand-sub">no timetable loaded</small></div>
-    <button class="btn small ghost" id="theme-btn" title="Switch between light and dark">Theme</button>
+    <div class="swatches"><div class="sw-set" id="palbar" role="radiogroup" aria-label="Colour theme"></div>
+      <small class="sw-name" id="palname"></small></div>
   </div>
 </header>
 <nav class="tabs" aria-label="Sections"><div class="wrap" id="tabbar" role="tablist"></div></nav>
@@ -495,7 +596,7 @@ th.num{font-family:var(--mono)}
 
 // --- Constants -------------------------------------------------------------
 
-const SCHEMA_VERSION = 2;   // 2 adds countFrom; migrate() backfills it as null
+const SCHEMA_VERSION = 3;   // 2 adds countFrom; 3 renames theme to a palette id
 const STORE_KEY   = 'atten.v1';        // the whole profile, one key
 const UNDO_KEY     = 'atten.undo';     // pre-import snapshot, one deep
 const ARCHIVE_PRE  = 'atten.archive.'; // a displaced semester, never mixed in
@@ -503,6 +604,19 @@ const ARCHIVE_PRE  = 'atten.archive.'; // a displaced semester, never mixed in
 // 75% is Ashoka's usual bar. It is per-course editable because a course can
 // set its own, and the app must never argue with a syllabus.
 const DEFAULT_THRESHOLD = 0.75;
+
+// Two dark, two light. Ported from the Study Tracker, which carries twenty-six;
+// these are the four whose accent stays clear of the green/amber/red that mean
+// safe, close and under the bar here. Order is the order they appear in the
+// header, darkest first.
+const PALETTES = [
+  ['monolith',  'Monolith',  'dark'],
+  ['mariana',   'Mariana',   'dark'],
+  ['porcelain', 'Porcelain', 'light'],
+  ['ink',       'Ink',       'light']
+];
+const PALETTE_IDS = PALETTES.map(p => p[0]);
+const DEFAULT_PALETTE = 'monolith';
 
 const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat'];   // Sunday never teaches
 const PX_PER_MIN = 1.25;              // Bob's scale, so the grids look alike
@@ -594,6 +708,13 @@ function migrate(o){
   // reported, never silently downgraded by filling in fields it may not mean.
   if(typeof o.v === 'number' && o.v > SCHEMA_VERSION) o.__future = true;
   Object.keys(b).forEach(k => { if(o[k] === undefined) o[k] = b[k]; });
+  // v3: theme held 'dark' or 'light'. Those two are now the ids of the palettes
+  // that replaced them, so the setting survives rather than resetting a
+  // returning visitor to the default. Anything unrecognised becomes null, which
+  // means "follow the system" - the same as never having chosen.
+  if(o.theme === 'dark')  o.theme = 'monolith';
+  if(o.theme === 'light') o.theme = 'porcelain';
+  if(o.theme != null && PALETTE_IDS.indexOf(o.theme) < 0) o.theme = null;
   o.v = SCHEMA_VERSION;
   return o;
 }
@@ -753,6 +874,29 @@ function stateLine(st){
   return hDown(st.budgetHours) + 'h of leave left (' + st.budgetSessions + ' ' + (st.budgetSessions===1?'class':'classes') + ' of ' + h1(st.step) + 'h).';
 }
 
+// --- Palette ---------------------------------------------------------------
+
+function activePalette(){
+  if(S.theme && PALETTE_IDS.indexOf(S.theme) >= 0) return S.theme;
+  return (window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches) ? 'porcelain' : DEFAULT_PALETTE;
+}
+function applyPalette(id){
+  document.documentElement.setAttribute('data-palette', id);
+  // The address bar and the installed app's title bar are painted by the OS
+  // from this, so a palette that changed only the page would leave a strip of
+  // the old one framing it.
+  const m = document.querySelector('meta[name="theme-color"]');
+  if(m) m.setAttribute('content', getComputedStyle(document.documentElement).getPropertyValue('--bg').trim());
+}
+function paintPicker(){
+  const cur = activePalette();
+  $('#palbar').innerHTML = PALETTES.map(p =>
+    '<button class="sw" data-pal="' + p[0] + '" role="radio" aria-checked="' + (p[0] === cur) + '"'
+    + ' tabindex="' + (p[0] === cur ? '0' : '-1') + '" title="' + p[1] + ' - ' + p[2] + '"'
+    + ' aria-label="' + p[1] + ', ' + p[2] + '"></button>').join('');
+  $('#palname').textContent = (PALETTES.find(p => p[0] === cur) || [])[1] || '';
+}
+
 // --- Chrome: banners, toasts, tabs ----------------------------------------
 
 function toast(msg, kind){
@@ -797,6 +941,7 @@ function render(){
     ? S.courses.length + ' courses · ' + esc(S.planName || CALENDAR.label)
     : 'no timetable loaded';
   $('#brand-sub').textContent = sub;
+  paintPicker();
   // The tab strip scrolls on a phone. Without this the active tab can sit
   // half off the left edge after visiting a tab further along, which reads as
   // a broken header rather than a scrolled one.
@@ -1387,16 +1532,13 @@ function download(obj, name){
 function timeToMin(v){ const p = String(v).split(':'); return (+p[0])*60 + (+p[1]); }
 
 document.addEventListener('click', function(e){
-  const t = e.target.closest('[data-tab],[data-go],[data-sid],[data-week],[data-flip],[data-ed],[data-rmex],[data-arch],button,[data-course]');
+  const t = e.target.closest('[data-tab],[data-go],[data-sid],[data-week],[data-flip],[data-ed],[data-rmex],[data-arch],button,[data-course],[data-pal]');
   if(!t) return;
   const d = t.dataset;
 
   if(d.tab){ view = d.tab; render(); return; }
   if(d.go){ view = d.go; render(); return; }
-  if(t.id === 'theme-btn'){
-    S.theme = (document.documentElement.getAttribute('data-theme') === 'dark') ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', S.theme); save(); return;
-  }
+  if(d.pal){ S.theme = d.pal; save(); applyPalette(d.pal); paintPicker(); return; }
   if(d.sid){ cycle(d.sid); render(); return; }
   // A course row. It carried cursor:pointer and a hover nudge from the start
   // and did nothing at all when clicked; it opens what is left of the course.
@@ -1514,8 +1656,7 @@ document.addEventListener('change', function(e){
 setInterval(() => { if(view === 'courses' && S.courses.length) render(); }, 60000);
 
 load();
-document.documentElement.setAttribute('data-theme',
-  S.theme || (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+applyPalette(activePalette());
 render();
 
 if('serviceWorker' in navigator && location.protocol.indexOf('http') === 0)
@@ -1523,7 +1664,7 @@ if('serviceWorker' in navigator && location.protocol.indexOf('http') === 0)
 
 // Exposed for the verification harness, not for the page. Everything the UI
 // does goes through a real click; these are read-only handles onto the maths.
-window.Atten = { CALENDAR, sessions, stats, stateLine, contactHours, diffAgainst, countFrom, excluded, nextSession, whenLabel,
+window.Atten = { CALENDAR, PALETTES, sessions, stats, stateLine, contactHours, diffAgainst, countFrom, excluded, nextSession, whenLabel,
                  state: () => S, render, save, blank };
 })();
 </script>

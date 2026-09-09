@@ -41,15 +41,32 @@ deploy .` puts it on Cloudflare with no changes.
 
 ## Design
 
-**Dark first.** The dark palette is defined on `:root` and light is derived
-from it, because dark is the one that gets read at 8am in a corridor. Both are
-complete; neither is a filter over the other.
+**Four palettes, each a complete token set.** Two dark and two light, ported
+from the Study Tracker's twenty-six. None is derived from another and none is a
+filter over another — every one declares the same tokens, so switching reaches
+every hairline, wash and shadow rather than the obvious parts.
 
-**One accent, and colour that means something.** A muted blue is the only
-decorative colour, and it appears only on interactive things — focus rings, the
-active tab, the progress bar. Green, amber and red are never decoration: they
-mean safe, close to the bar, and under it. Nothing else is allowed to borrow
-them, so a red edge in the corner of your eye always means the same thing.
+| Palette | | Accent | Ground |
+|---|---|---|---|
+| **Monolith** | dark | `#9FA8DA` periwinkle | near-black `#020203` |
+| **Mariana** | dark | `#26C6DA` cyan | near-black `#010203` |
+| **Porcelain** | light | `#2563A8` blue | cool grey `#E8EBEE` |
+| **Ink** | light | `#3B3F8F` indigo | violet-white `#EAEAEE` |
+
+**The four were picked by a rule, not by taste.** Green, amber and red are never
+decoration here: they mean safe, close to the bar, and under it. An accent that
+lands inside that band puts a verdict on your attendance into the focus ring and
+the active tab. That rules out every warm palette the Study Tracker carries —
+paper's amber sits on `--warn`, linen's rust and akira's red on `--bad`, meadow's
+and nostromo's green on `--ok`. The four that survive are all cool, and that is a
+consequence rather than a preference. A red edge in the corner of your eye always
+means the same thing.
+
+The choice is stamped onto `<html>` by an inline script in `<head>` before the
+body parses, so a returning visitor gets their palette as the first paint rather
+than a flash of the default. The status washes (`--ok-soft` and the rest) are
+derived with `color-mix()` from the status colour and the recessed surface, so a
+palette declares a colour and never its tints.
 
 **JetBrains Mono, everywhere, self-hosted.** `local()` comes first in every
 `@font-face`, so a machine that already has the Nerd Font installed downloads
@@ -241,7 +258,10 @@ would leave every other copy of the app with the old one.
 ## Data and privacy
 
 One key, `atten.v1`, holds the whole profile — courses, every logged session,
-extras, per-course bars, reconcile figures. `atten.undo` holds the profile from
+extras, per-course bars, reconcile figures. It carries an integer
+`SCHEMA_VERSION`, migrated on read: **v3** turns the old `theme` values into
+palette ids, so `dark` becomes Monolith and `light` becomes Porcelain rather
+than resetting anyone to the default. `atten.undo` holds the profile from
 before the last import. `atten.archive.<semester>` holds a displaced term, kept
 and never mixed in. Nothing else is written, and the `atten.` prefix exists
 because Bob and this app share one `file://` origin.
