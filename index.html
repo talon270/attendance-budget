@@ -64,10 +64,11 @@
   --shadow:0 1px 2px rgba(0,0,0,.5), 0 8px 28px -12px rgba(0,0,0,.7);
   --grain:.045;
 
-  /* One family. Three names kept so every rule below still reads as the role
-     it plays rather than as one font name repeated ninety times. */
+  /* One family, one name. It was three - --sans and --serif aliased to the
+     same stack - and the aliases only made rules read as roles the page no
+     longer has. Contrast between a figure and its label now comes from weight
+     and tracking, which is the only place a monospaced page can get it. */
   --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
-  --sans:var(--mono); --serif:var(--mono);
 
   --r-lg:14px; --r-md:10px; --r-sm:7px;
   --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px;
@@ -90,7 +91,7 @@ html{ -webkit-text-size-adjust:100%; scroll-behavior:smooth }
 @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto} }
 body{
   margin:0; background:var(--bg); color:var(--ink);
-  font:400 0.885rem/1.62 var(--sans);
+  font:400 0.885rem/1.62 var(--mono);
   font-synthesis-weight:none;
 }
 /* Grain. Flat dark surfaces read as dead pixels; a little tooth stops that.
@@ -103,18 +104,18 @@ body::after{
 @media print{ body::after{display:none} }
 
 h1,h2,h3{margin:0; font-weight:600; line-height:1.2; letter-spacing:-.01em}
-h1{font:600 1.02rem/1.2 var(--sans)}
-h2{font:500 .7rem/1.3 var(--sans); letter-spacing:.055em; text-transform:uppercase; color:var(--muted)}
-h3{font:600 1.02rem/1.25 var(--sans)}
+h1{font:600 1.02rem/1.2 var(--mono)}
+h2{font:500 .7rem/1.3 var(--mono); letter-spacing:.055em; text-transform:uppercase; color:var(--muted)}
+h3{font:600 1.02rem/1.25 var(--mono)}
 p{margin:0 0 var(--s3); max-width:58ch; text-wrap:pretty}
 a{color:var(--accent); text-underline-offset:3px; text-decoration-thickness:1px}
 code,pre{font-family:var(--mono); font-size:.88em}
 :focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:3px}
 
 /* Numbers are the content. Tabular everywhere so a column of them lines up,
-   and the serif because a 3rem percentage in a UI sans looks like a warning
-   dialog rather than a figure worth reading. */
-.num,.pct,td.num,th.num{font-variant-numeric:tabular-nums}
+   and slashed zero so 0 and O never read alike in a course code sitting beside
+   an hour count. */
+.num,.pct,td.num,th.num{font-variant-numeric:tabular-nums slashed-zero}
 
 .wrap{width:min(100% - 2.5rem, 1180px); margin-inline:auto}
 .skip{position:absolute; left:-9999px; top:0; background:var(--accent); color:var(--accent-ink);
@@ -126,7 +127,7 @@ header.top{position:sticky; top:0; z-index:var(--z-head); background:color-mix(i
   backdrop-filter:blur(12px) saturate(1.1); border-bottom:1px solid var(--line)}
 header.top .wrap{display:flex; align-items:center; gap:var(--s4); min-height:60px}
 .brand{margin-right:auto; display:flex; flex-direction:column; gap:1px}
-.brand b{font:600 .98rem/1.15 var(--sans); letter-spacing:-.01em}
+.brand b{font:600 .98rem/1.15 var(--mono); letter-spacing:-.01em}
 .brand small{font-size:.72rem; color:var(--muted); letter-spacing:.02em}
 
 nav.tabs{position:sticky; top:60px; z-index:var(--z-nav); background:var(--bg); border-bottom:1px solid var(--line)}
@@ -134,7 +135,7 @@ nav.tabs .wrap{display:flex; gap:var(--s1); overflow-x:auto; scrollbar-width:non
 nav.tabs .wrap::-webkit-scrollbar{display:none}
 nav.tabs button{
   position:relative; background:none; border:0; color:var(--muted); cursor:pointer; white-space:nowrap;
-  font:500 .87rem/1 var(--sans); padding:14px 12px 13px; transition:color .18s ease;
+  font:500 .87rem/1 var(--mono); padding:14px 12px 13px; transition:color .18s ease;
 }
 nav.tabs button::after{
   content:""; position:absolute; left:12px; right:12px; bottom:0; height:2px; border-radius:2px 2px 0 0;
@@ -153,7 +154,7 @@ button,select,input,textarea{font:inherit; color:inherit}
 .btn{
   display:inline-flex; align-items:center; gap:var(--s2); background:var(--surface-2); color:var(--ink);
   border:1px solid var(--line-2); border-radius:var(--r-sm); padding:8px 13px; cursor:pointer;
-  font:500 .87rem/1.2 var(--sans);
+  font:500 .87rem/1.2 var(--mono);
   transition:background .16s ease, border-color .16s ease, transform .12s ease;
 }
 .btn:hover{border-color:var(--accent); background:var(--surface)}
@@ -169,7 +170,7 @@ input[type=text],input[type=date],input[type=time],input[type=number],select,tex
   transition:border-color .16s ease;
 }
 input:hover,select:hover{border-color:var(--muted)}
-label.field{display:flex; flex-direction:column; gap:5px; font:500 .68rem/1 var(--sans);
+label.field{display:flex; flex-direction:column; gap:5px; font:500 .68rem/1 var(--mono);
   letter-spacing:.03em; text-transform:uppercase; color:var(--muted)}
 label.field > *{text-transform:none; letter-spacing:0; font-size:.95rem; font-weight:400}
 
@@ -193,20 +194,77 @@ label.field > *{text-transform:none; letter-spacing:0; font-size:.95rem; font-we
 .banner.warn{background:var(--warn-soft); border-color:var(--warn); color:var(--ink)}
 .banner.bad{background:var(--bad-soft); border-color:var(--bad); color:var(--ink)}
 
-/* ---------- the hero: can I skip the next one ---------- */
+/* ---------- the hero: can I skip the next one ----------
+   Two columns from 720px: the sentence on the left, the figure it is about on
+   the right. It used to be one column capped at 46ch inside a 690px card, so
+   276px of every hero was empty and the percentage the sentence argues about
+   was not on screen at all - you had to scroll into the list to find it. */
 .hero{background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg);
-  padding:var(--s5) var(--s5) var(--s4); margin:0 0 var(--s5); box-shadow:var(--shadow); position:relative; overflow:hidden}
+  padding:var(--s5); margin:0 0 var(--s5); box-shadow:var(--shadow); position:relative; overflow:hidden;
+  display:grid; grid-template-columns:minmax(0,1fr); gap:var(--s4) var(--s6)}
+@media (min-width:720px){ .hero{grid-template-columns:minmax(0,1fr) minmax(210px,auto)} }
 .hero::before{content:""; position:absolute; inset:0 auto 0 0; width:3px; background:var(--accent)}
 .hero.safe::before{background:var(--ok)} .hero.close::before{background:var(--warn)} .hero.over::before{background:var(--bad)}
-.hero-k{font:500 .7rem/1 var(--sans); letter-spacing:.07em; text-transform:uppercase; color:var(--muted)}
+.hero-main{grid-column:1; min-width:0}
+.hero-k{font:500 .7rem/1 var(--mono); letter-spacing:.07em; text-transform:uppercase; color:var(--muted)}
 .hero-when{color:var(--ink-2); font-weight:500; letter-spacing:0; text-transform:none; font-size:.8rem}
-.hero-code{font:700 clamp(1.45rem,4vw,1.95rem)/1.1 var(--serif); letter-spacing:-.035em; margin:var(--s3) 0 2px}
-.hero-title{color:var(--ink-2); font-size:.9rem; margin:0 0 var(--s3); max-width:42ch}
+.hero-code{font:700 clamp(1.45rem,4vw,1.95rem)/1.1 var(--mono); letter-spacing:-.035em; margin:var(--s3) 0 2px}
+.hero-title{color:var(--ink-2); font-size:.9rem; margin:0 0 var(--s3)}
 .hero-meta{font-family:var(--mono); font-size:.83rem; color:var(--muted); margin-bottom:var(--s4)}
-.hero-cost{font-size:.96rem; line-height:1.6; margin:0 0 var(--s4); max-width:46ch}
+.hero-cost{font-size:.96rem; line-height:1.6; margin:0; max-width:46ch}
 .hero-cost b{font-weight:700; color:var(--ink)}
-.hero-actions{display:flex; gap:var(--s2); flex-wrap:wrap; padding-top:var(--s3); border-top:1px solid var(--line)}
 .hero-none{color:var(--ink-2)}
+
+/* The right column. Same weight of type as a course row's percentage, because
+   it is the same fact about the same course - it was only ever missing here. */
+.hero-stat{grid-column:1; padding:var(--s3) 0 0; border-top:1px solid var(--line)}
+@media (min-width:720px){
+  .hero-stat{grid-column:2; grid-row:1; padding:0 0 0 var(--s5); border-top:0; border-left:1px solid var(--line)}
+}
+.hero-pct{font:700 clamp(1.7rem,5vw,2.3rem)/1 var(--mono); letter-spacing:-.045em;
+  font-variant-numeric:tabular-nums slashed-zero}
+.hero-stat.safe .hero-pct{color:var(--ok)} .hero-stat.close .hero-pct{color:var(--warn)}
+.hero-stat.over .hero-pct{color:var(--bad)}
+.hero-stat.nodata .hero-pct{font-size:1rem; font-weight:500; letter-spacing:0; color:var(--muted)}
+.hero-lab{font:500 .68rem/1.4 var(--mono); letter-spacing:.05em; text-transform:uppercase;
+  color:var(--muted); margin:5px 0 var(--s3)}
+.hero-stat .gauge{margin-bottom:7px}
+.hero-fig{font-size:.79rem; color:var(--ink-2); line-height:1.5}
+.hero-fig b{color:var(--ink); font-weight:700; font-variant-numeric:tabular-nums slashed-zero}
+.hero-actions{grid-column:1/-1; display:flex; gap:var(--s3); flex-wrap:wrap; align-items:center;
+  padding-top:var(--s4); border-top:1px solid var(--line)}
+
+/* ---------- segmented control ----------
+   Three statements of fact, one of which is already true. It used to render the
+   true one `disabled` at 45% opacity, so the only accurate button on the row
+   looked like the broken one. Pressed, not disabled: still clickable, visibly
+   the current answer, and no filled call-to-action reading "mark absent". */
+.seg{display:inline-flex; background:var(--bg-2); border:1px solid var(--line-2);
+  border-radius:9px; padding:3px; gap:2px}
+.seg button{background:none; border:0; border-radius:6px; padding:7px 13px; cursor:pointer;
+  color:var(--muted); font:500 .84rem/1.2 var(--mono); white-space:nowrap;
+  transition:background .16s ease, color .16s ease}
+.seg button:hover{color:var(--ink)}
+.seg button[aria-checked="true"]{background:var(--surface); color:var(--ink); box-shadow:var(--shadow)}
+.seg button.on-att[aria-checked="true"]{color:var(--ok)}
+.seg button.on-abs[aria-checked="true"]{color:var(--bad)}
+.seg button.on-can[aria-checked="true"]{color:var(--muted); text-decoration:line-through}
+
+/* ---------- gauge ----------
+   One component, used on the hero, on every course row and on term progress.
+   The tick is the threshold. A bare percentage never said how far it was from
+   the bar it is judged against; the distance between fill and tick is the
+   whole answer, and it is the only thing on the page drawn to scale. */
+.gauge{position:relative; height:8px; border-radius:99px; background:var(--bg-2);
+  border:1px solid var(--line)}
+.gauge i{position:absolute; inset:0 auto 0 0; border-radius:99px; background:var(--accent)}
+.gauge b{position:absolute; top:-4px; bottom:-4px; width:2px; border-radius:1px;
+  background:var(--ink-2); transform:translateX(-1px)}
+.gauge.safe i{background:var(--ok)} .gauge.close i{background:var(--warn)} .gauge.over i{background:var(--bad)}
+@media (prefers-reduced-motion: no-preference){
+  .anim .gauge i{animation:wipe .55s cubic-bezier(.22,.61,.36,1) both}
+  @keyframes wipe{from{clip-path:inset(0 100% 0 0)} to{clip-path:inset(0 0 0 0)}}
+}
 
 /* ---------- course rows ----------
    A rule and a status edge, not a box inside a box. The percentage is the
@@ -218,32 +276,94 @@ label.field > *{text-transform:none; letter-spacing:0; font-size:.95rem; font-we
   background:var(--surface); border:1px solid var(--line); border-radius:var(--r-md);
   cursor:pointer; transition:border-color .18s ease, background .18s ease, transform .18s ease;
 }
+/* The row was already cursor:pointer with a hover nudge and no click handler -
+   an affordance that promised something and did nothing. It opens now. */
+
 .course{border-left:3px solid var(--line-2)}
 .course:hover{border-color:var(--line-2); background:var(--surface-2); transform:translateX(2px)}
 .course.safe{border-left-color:var(--ok)} .course.close{border-left-color:var(--warn)}
 .course.over{border-left-color:var(--bad)} .course.none{border-left-color:var(--line-2)}
-.course .code{font:600 1.05rem/1.2 var(--sans); letter-spacing:-.01em}
+/* The toggle is a real button on the code, so it is reachable and announced.
+   The rest of the row still opens on click - the article carries the same
+   data-course - but the article is not itself declared a button, because it
+   contains the session buttons of the panel it opens. */
+.course .code{font:600 1.05rem/1.2 var(--mono); letter-spacing:-.01em; font-variant-numeric:slashed-zero;
+  background:none; border:0; padding:0; color:inherit; cursor:pointer; text-align:left;
+  border-bottom:1px solid transparent; transition:border-color .16s ease}
+.course .code{display:inline-flex; align-items:center; gap:var(--s2)}
+.course .code:hover{border-bottom-color:var(--line-2)}
+.course .code::after{content:""; width:6px; height:6px; flex:none; margin-top:-3px;
+  border-right:1.5px solid var(--muted); border-bottom:1.5px solid var(--muted);
+  transform:rotate(45deg); transition:transform .2s ease, border-color .2s ease}
+.course:hover .code::after{border-color:var(--ink-2)}
+.course .code[aria-expanded="true"]::after{transform:rotate(-135deg); margin-top:2px; border-color:var(--accent)}
 .course .ttl{color:var(--muted); font-size:.86rem; font-weight:400}
 .course .pct{grid-column:2; grid-row:1 / span 2; align-self:center; text-align:right;
-  font:700 clamp(1.5rem,4.2vw,2.05rem)/1 var(--serif); letter-spacing:-.04em; color:var(--ink)}
+  font:700 clamp(1.5rem,4.2vw,2.05rem)/1 var(--mono); letter-spacing:-.04em; color:var(--ink);
+  font-variant-numeric:tabular-nums slashed-zero}
 .course.safe .pct{color:var(--ok)} .course.close .pct{color:var(--warn)} .course.over .pct{color:var(--bad)}
-.course.none .pct{font-size:1rem; color:var(--muted); font-family:var(--sans); font-weight:500}
+.course.none .pct{font-size:1rem; color:var(--muted); font-family:var(--mono); font-weight:500}
 .course .line{grid-column:1; font-size:.83rem; color:var(--ink-2); line-height:1.55; max-width:50ch}
 .course .sub{grid-column:1 / -1; font-family:var(--mono); font-size:.75rem; color:var(--muted);
   padding-top:var(--s2); border-top:1px solid var(--line)}
+.course .meter{grid-column:1 / -1; display:flex; align-items:center; gap:var(--s3); margin-top:2px}
+.course .meter .gauge{flex:1; min-width:0}
+.course .meter em{font-style:normal; font-size:.72rem; color:var(--muted); white-space:nowrap;
+  font-variant-numeric:tabular-nums slashed-zero}
+/* The expanded panel: what is actually left of this course, each one clickable.
+   Kept to the next ten so a Mon-Wed-Fri course does not unroll thirty rows. */
+.course .cx{grid-column:1 / -1; padding-top:var(--s3); margin-top:2px; border-top:1px solid var(--line)}
+@media (prefers-reduced-motion: no-preference){
+  .course .cx{animation:drop .24s cubic-bezier(.22,.61,.36,1) both}
+  @keyframes drop{from{opacity:0; transform:translateY(-4px)} to{opacity:1; transform:none}}
+}
 @media (max-width:520px){
   .course{grid-template-columns:1fr}
   .course .pct{grid-column:1; grid-row:auto; text-align:left}
 }
-.pill{display:inline-block; border-radius:3px; padding:2px 7px; font:700 .64rem/1.4 var(--sans);
-  letter-spacing:.03em; text-transform:uppercase; border:1px solid; vertical-align:2px}
-.pill.safe{color:var(--ok); border-color:color-mix(in srgb,var(--ok) 45%,transparent); background:var(--ok-soft)}
-.pill.close{color:var(--warn); border-color:color-mix(in srgb,var(--warn) 45%,transparent); background:var(--warn-soft)}
-.pill.over{color:var(--bad); border-color:color-mix(in srgb,var(--bad) 45%,transparent); background:var(--bad-soft)}
-.pill.none{color:var(--muted); border-color:var(--line-2); background:var(--bg-2)}
 
-.bar{height:6px; border-radius:3px; background:var(--bg-2); overflow:hidden; border:1px solid var(--line)}
-.bar span{display:block; height:100%; background:var(--accent); border-radius:3px}
+/* ---------- session list ----------
+   Used in the rail's next-seven-days card and inside an expanded course row.
+   One click cycles attending -> absent -> cancelled, the same gesture the
+   Week grid uses, so there is one way to log a class and not two. */
+.upnext{list-style:none; margin:var(--s3) 0 0; padding:0; display:flex; flex-direction:column; gap:2px}
+.upnext button{
+  width:100%; display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:var(--s3);
+  align-items:baseline; text-align:left; background:none; cursor:pointer; color:var(--ink-2);
+  border:0; border-left:2px solid var(--line-2); border-radius:0 var(--r-sm) var(--r-sm) 0;
+  padding:7px 9px; font:400 .77rem/1.35 var(--mono); font-variant-numeric:tabular-nums slashed-zero;
+  transition:background .15s ease, border-color .15s ease, padding-left .15s ease;
+}
+.upnext button:hover{background:var(--surface-2); padding-left:13px}
+.upnext button b{font-weight:600; color:var(--ink); letter-spacing:-.01em}
+.upnext button span{color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.upnext button em{font-style:normal; font-weight:600; font-size:.72rem}
+.upnext .attended{border-left-color:var(--ok)}
+.upnext .attended em{color:var(--ok)}
+.upnext .absent{border-left-color:var(--bad); background:var(--bad-soft)}
+.upnext .absent em{color:var(--bad)}
+.upnext .cancelled{border-left-color:var(--line-2); opacity:.55}
+.upnext .cancelled b,.upnext .cancelled span{text-decoration:line-through}
+
+/* ---------- disclosure ----------
+   For a control that is set once a semester and then never touched again. It
+   was the tallest card in the rail: seven number inputs, permanently open,
+   sitting above the figure you actually glance at. */
+.disclose{background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg);
+  margin:0 0 var(--s4); box-shadow:var(--shadow)}
+.disclose > summary{
+  list-style:none; cursor:pointer; padding:var(--s4); display:flex; align-items:center; gap:var(--s2);
+  font:500 .7rem/1.3 var(--mono); letter-spacing:.055em; text-transform:uppercase; color:var(--muted);
+  transition:color .16s ease;
+}
+.disclose > summary::-webkit-details-marker{display:none}
+.disclose > summary:hover{color:var(--ink-2)}
+.disclose > summary::after{content:""; margin-left:auto; width:7px; height:7px;
+  border-right:1.5px solid currentColor; border-bottom:1.5px solid currentColor;
+  transform:rotate(45deg) translate(-2px,-2px); transition:transform .2s ease}
+.disclose[open] > summary{color:var(--ink)}
+.disclose[open] > summary::after{transform:rotate(-135deg)}
+.disclose .body{padding:0 var(--s4) var(--s4)}
 
 /* ---------- adaptive page shell ----------
    Phone: one stacked column. Desktop: content and a settings rail, so the
@@ -251,14 +371,23 @@ label.field > *{text-transform:none; letter-spacing:0; font-size:.95rem; font-we
 .split{display:grid; gap:var(--s5); align-items:start}
 @media (min-width:1080px){ .split{grid-template-columns:minmax(0,1.6fr) minmax(290px,.9fr)} }
 .rail .card{padding:var(--s4)}
-@media (min-width:1080px){ .rail{position:sticky; top:126px} }
+/* Sticky, but never taller than the space it has: at seven courses the rail
+   ran 923px against a 1394px column, so it may scroll inside its own pane
+   rather than stranding the bottom of the page beside dead background. */
+@media (min-width:1080px){
+  .rail{position:sticky; top:126px; max-height:calc(100vh - 142px); overflow-y:auto;
+        scrollbar-width:thin; padding-right:2px}
+}
 
-/* staggered entry - never all at once */
+/* Staggered entry - never all at once, and only when the view actually
+   changed. Every render replaces #view wholesale, so an unscoped rule replayed
+   the whole flight every time a threshold was nudged, which reads as the page
+   reloading under you rather than a number updating. */
 @media (prefers-reduced-motion: no-preference){
-  .course,.hero,.card{animation:rise .38s cubic-bezier(.22,.61,.36,1) backwards}
-  .course:nth-child(2){animation-delay:.04s} .course:nth-child(3){animation-delay:.08s}
-  .course:nth-child(4){animation-delay:.12s} .course:nth-child(5){animation-delay:.16s}
-  .course:nth-child(n+6){animation-delay:.2s}
+  .anim .course,.anim .hero,.anim .card,.anim .disclose{animation:rise .38s cubic-bezier(.22,.61,.36,1) backwards}
+  .anim .course:nth-child(2){animation-delay:.04s} .anim .course:nth-child(3){animation-delay:.08s}
+  .anim .course:nth-child(4){animation-delay:.12s} .anim .course:nth-child(5){animation-delay:.16s}
+  .anim .course:nth-child(n+6){animation-delay:.2s}
   @keyframes rise{from{opacity:0; transform:translateY(7px)} to{opacity:1; transform:none}}
 }
 
@@ -266,7 +395,7 @@ label.field > *{text-transform:none; letter-spacing:0; font-size:.95rem; font-we
 .gridwrap{overflow-x:auto; border:1px solid var(--line); border-radius:var(--r-lg); background:var(--surface)}
 .gridhead{display:grid; grid-template-columns:56px repeat(6,minmax(116px,1fr));
   border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--surface); z-index:2}
-.gridhead div{padding:9px 6px; font:600 .76rem/1.3 var(--sans); text-align:center; color:var(--muted);
+.gridhead div{padding:9px 6px; font:600 .76rem/1.3 var(--mono); text-align:center; color:var(--muted);
   letter-spacing:.02em; text-transform:uppercase}
 .gridhead div span{display:block; font:400 .8rem/1.3 var(--mono); letter-spacing:0; text-transform:none}
 .gridhead div.today{color:var(--accent)}
@@ -278,12 +407,12 @@ label.field > *{text-transform:none; letter-spacing:0; font-size:.95rem; font-we
 .hourline{position:absolute; left:0; right:0; border-top:1px solid var(--line); opacity:.55}
 .blk{
   position:absolute; left:3px; right:3px; border-radius:var(--r-sm); padding:5px 7px; overflow:hidden;
-  border:1px solid; border-left-width:3px; font:400 .76rem/1.3 var(--sans); cursor:pointer; text-align:left;
+  border:1px solid; border-left-width:3px; font:400 .76rem/1.3 var(--mono); cursor:pointer; text-align:left;
   transition:filter .15s ease, transform .12s ease;
 }
 .blk:hover{filter:brightness(1.12)} .blk:active{transform:scale(.985)}
-.blk b{display:block; font:600 .82rem/1.25 var(--sans); letter-spacing:-.01em}
-.blk .tag{display:block; font:600 .6rem/1.4 var(--sans); letter-spacing:.04em; text-transform:uppercase; opacity:.85}
+.blk b{display:block; font:600 .82rem/1.25 var(--mono); letter-spacing:-.01em}
+.blk .tag{display:block; font:600 .6rem/1.4 var(--mono); letter-spacing:.04em; text-transform:uppercase; opacity:.85}
 .blk.attended{background:var(--ok-soft); border-color:var(--ok); color:var(--ink)}
 .blk.absent{background:var(--bad-soft); border-color:var(--bad); color:var(--ink)}
 .blk.cancelled{background:var(--bg-2); border-color:var(--line-2); color:var(--muted); text-decoration:line-through}
@@ -295,10 +424,10 @@ label.field > *{text-transform:none; letter-spacing:0; font-size:.95rem; font-we
 
 /* ---------- calendar editor ---------- */
 .months{display:grid; grid-template-columns:repeat(auto-fit,minmax(244px,1fr)); gap:var(--s4)}
-.month h3{font:600 .84rem/1.2 var(--sans); text-align:center; margin-bottom:var(--s2);
+.month h3{font:600 .84rem/1.2 var(--mono); text-align:center; margin-bottom:var(--s2);
   letter-spacing:.04em; color:var(--ink-2)}
 .mgrid{display:grid; grid-template-columns:repeat(7,1fr); gap:3px}
-.mgrid .dow{font:600 .62rem/1.6 var(--sans); text-align:center; color:var(--muted); letter-spacing:0}
+.mgrid .dow{font:600 .62rem/1.6 var(--mono); text-align:center; color:var(--muted); letter-spacing:0}
 .mgrid button{
   aspect-ratio:1; border:1px solid var(--line); border-radius:var(--r-sm); background:var(--bg-2);
   font:400 .76rem/1 var(--mono); cursor:pointer; padding:0; display:flex; flex-direction:column;
@@ -310,7 +439,7 @@ label.field > *{text-transform:none; letter-spacing:0; font-size:.95rem; font-we
 .mgrid button.off{background:var(--bad-soft); border-color:var(--bad); text-decoration:line-through; color:var(--bad)}
 .mgrid button.swap{background:var(--warn-soft); border-color:var(--warn); color:var(--warn)}
 .mgrid button.sun{opacity:.38; cursor:default}
-.mgrid button small{font:600 .55rem/1 var(--sans); letter-spacing:.04em}
+.mgrid button small{font:600 .55rem/1 var(--mono); letter-spacing:.04em}
 pre.out{background:var(--bg-2); border:1px solid var(--line); border-radius:var(--r-md); padding:var(--s3);
   overflow:auto; font-size:.76rem; line-height:1.6; max-height:340px; white-space:pre; color:var(--ink-2)}
 
@@ -318,15 +447,15 @@ pre.out{background:var(--bg-2); border:1px solid var(--line); border-radius:var(
 table{border-collapse:collapse; width:100%; font-size:.86rem}
 th,td{text-align:left; padding:8px 10px; border-bottom:1px solid var(--line)}
 tbody tr:last-child td{border-bottom:0}
-th{font:600 .66rem/1.4 var(--sans); color:var(--muted); text-transform:uppercase; letter-spacing:.045em}
+th{font:600 .66rem/1.4 var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:.045em}
 td.num,th.num{text-align:right; font-variant-numeric:tabular-nums; font-family:var(--mono); font-size:.82rem}
-th.num{font-family:var(--sans)}
+th.num{font-family:var(--mono)}
 .tablewrap{overflow-x:auto; margin-inline:calc(var(--s4) * -1); padding-inline:var(--s4)}
 
 /* ---------- states ---------- */
 .empty{text-align:center; padding:var(--s7) var(--s4); max-width:56ch; margin-inline:auto}
 .empty h2{color:var(--ink); text-transform:none; letter-spacing:-.015em;
-  font:700 clamp(1.3rem,4vw,1.7rem)/1.2 var(--serif); letter-spacing:-.03em; margin-bottom:var(--s3)}
+  font:700 clamp(1.3rem,4vw,1.7rem)/1.2 var(--mono); letter-spacing:-.03em; margin-bottom:var(--s3)}
 .steps{text-align:left; margin:var(--s5) auto 0; padding-left:1.3em; color:var(--ink-2)}
 .steps li{margin-bottom:var(--s3); padding-left:.2em}
 .steps li::marker{color:var(--muted); font-family:var(--mono); font-size:.85em}
@@ -655,6 +784,9 @@ function banners(){
 
 const VIEWS = [['courses','Courses'],['week','Week'],['reconcile','Reconcile'],['calendar','Calendar'],['data','Data']];
 let view = 'courses';
+let lastView = null;      // entry animation runs on a view change, not on every render
+let openCourse = null;    // the expanded course row, kept across a re-render
+let refocus = null;       // #view is replaced wholesale, so keyboard focus is put back by hand
 
 function render(){
   invalidate();
@@ -676,6 +808,18 @@ function render(){
     view === 'week'      ? weekView() :
     view === 'reconcile' ? reconcileView() :
     view === 'calendar'  ? calendarView() : dataView();
+  // Only a view change flies the page in. Nudging a threshold re-renders too,
+  // and replaying the stagger there reads as the page reloading under you.
+  const el = $('#view');
+  el.className = (lastView !== view) ? 'anim' : '';
+  lastView = view;
+  const bd = $('#bar-details');
+  if(bd) bd.addEventListener('toggle', () => { barOpen = bd.open; });
+  if(refocus){
+    const back = el.querySelector('button.code[data-course="' + (window.CSS && CSS.escape ? CSS.escape(refocus) : refocus) + '"]');
+    if(back) back.focus({preventScroll:true});
+    refocus = null;
+  }
   $('#foot').innerHTML = '<p>Everything is stored in this browser under <code>atten.v1</code>. No account, no server, no network. '
     + (S.importedAt ? 'Timetable imported ' + esc(S.importedAt.slice(0,10)) + '. ' : '')
     + 'Calendar authored ' + CALENDAR.authored + (CALENDAR.source ? ' from ' + CALENDAR.source + '.' : '.') + '</p>';
@@ -692,14 +836,75 @@ function emptyView(){
 
 // --- Courses view ----------------------------------------------------------
 
+// One bar, drawn to scale, used by the hero, every course row and term
+// progress. `fill` and `tick` are percentages of the same 0-100 axis, so the
+// gap between the filled edge and the tick is the budget, at a glance and
+// without arithmetic. tick null draws no threshold - term progress is measured
+// against nothing.
+function gauge(fill, tick, state, label){
+  const f = Math.max(0, Math.min(100, fill));
+  return '<div class="gauge ' + (state || '') + '"'
+    + (label ? ' role="img" aria-label="' + esc(label) + '"' : ' aria-hidden="true"') + '>'
+    + '<i style="width:' + f.toFixed(1) + '%"></i>'
+    + (tick == null ? '' : '<b style="left:' + Math.max(0, Math.min(100, tick)).toFixed(1) + '%"></b>')
+    + '</div>';
+}
+
+// A clickable session. One click cycles attending -> absent -> cancelled, the
+// same gesture and the same handler as a block on the Week grid.
+function sessionRow(s, withDate){
+  const m = markOf(s);
+  const when = (withDate ? prettyDate(s.date) + ', ' : '') + hhmm(s.start);
+  const word = m === 'attended' ? 'attending' : m === 'absent' ? 'absent' : 'cancelled';
+  return '<li><button class="' + m + '" data-sid="' + esc(s.id) + '" aria-label="'
+    + esc(s.code + ' ' + when + ', ' + h1(s.hours) + ' hours, currently ' + word + '. Click to change.') + '">'
+    + '<b>' + esc(s.code) + '</b><span>' + esc(when) + '</span>'
+    + '<em>' + (m === 'attended' ? h1(s.hours) + 'h' : word) + '</em></button></li>';
+}
+
+// Everything still to come, from right now. Shared by the rail card and by an
+// expanded course row, which differ only in what they filter and how many they
+// are willing to show.
+function upcoming(pred, limit){
+  const t = today(), now = new Date().getHours()*60 + new Date().getMinutes();
+  const out = [];
+  const all = sessions();
+  for(let i = 0; i < all.length && out.length < limit; i++){
+    const s = all[i];
+    if(!s.counted) continue;
+    if(s.date < t || (s.date === t && s.end <= now)) continue;
+    if(pred(s)) out.push(s);
+  }
+  return out;
+}
+
+// The figure the hero sentence is arguing about. It was not on the page: the
+// hero's largest type was the course code, and the percentage lived only in the
+// list below the fold.
+function heroStat(st){
+  if(st.state === 'none'){
+    return '<div class="hero-stat nodata"><div class="hero-pct">no data yet</div>'
+      + '<div class="hero-lab">this course</div>'
+      + '<p class="hero-fig">Nothing has been held, so there is no percentage to weigh an absence against. '
+      + h1(st.total) + 'h is scheduled in total.</p></div>';
+  }
+  return '<div class="hero-stat ' + st.state + '">'
+    + '<div class="hero-pct">' + pctText(st.pct) + '</div>'
+    + '<div class="hero-lab">attended in ' + esc(st.code) + '</div>'
+    + gauge(st.pct*100, st.thr*100, st.state,
+        pctText(st.pct) + ' attended against a ' + Math.round(st.thr*100) + ' percent bar')
+    + '<p class="hero-fig"><b>' + hDown(st.budgetHours) + 'h</b> of leave left &middot; bar '
+    + Math.round(st.thr*100) + '%<br>' + h1(st.attended) + 'h of ' + h1(st.held) + 'h held</p></div>';
+}
+
 function heroView(){
   const s0 = nextSession();
   if(!s0){
     const done = S.courses.length ? 'No class left on the calendar. The term ends ' + prettyDate(CALENDAR.end) + '.'
                                   : 'Load a timetable and this is where the next class will be.';
-    return '<section class="hero"><div class="hero-k">Next up</div>'
+    return '<section class="hero"><div class="hero-main"><div class="hero-k">Next up</div>'
       + '<p class="hero-code" style="font-size:1.4rem">Nothing scheduled</p>'
-      + '<p class="hero-none">' + esc(done) + '</p></section>';
+      + '<p class="hero-none">' + esc(done) + '</p></div></section>';
   }
   const c  = S.courses.find(x => x.code === s0.code) || {};
   const st = stats(s0.code);
@@ -722,23 +927,42 @@ function heroView(){
     cost_line = 'Skipping it costs <b>' + h1(s0.hours) + 'h</b>. You would still have <b>'
       + hDown(after) + 'h</b> of leave in ' + esc(s0.code) + '.';
   }
+  // No primary button here on purpose. A filled call-to-action reading "mark
+  // absent" is an app nudging you to skip a class. These are three equal
+  // statements of fact, and the one already true is pressed rather than
+  // disabled - disabled greyed out the only accurate button on the row.
+  const seg = [['attended','Attending','on-att'], ['absent','Absent','on-abs'], ['cancelled','Cancelled','on-can']]
+    .map(o => '<button class="' + o[2] + '" role="radio" data-mark="' + esc(s0.id) + '" data-to="' + o[0] + '"'
+      + ' aria-checked="' + (mark === o[0]) + '"' + (mark === o[0] ? ' tabindex="0"' : ' tabindex="-1"') + '>' + o[1] + '</button>').join('');
   return '<section class="hero ' + st.state + '">'
+    + '<div class="hero-main">'
     + '<div class="hero-k">Next up <span class="hero-when">' + esc(whenLabel(s0)) + '</span></div>'
     + '<h3 class="hero-code">' + esc(s0.code) + '</h3>'
     + '<p class="hero-title">' + esc(c.title || '') + '</p>'
     + '<p class="hero-meta">' + hhmm(s0.start) + ' &ndash; ' + hhmm(s0.end) + ' &middot; ' + esc(s0.comp + ' ' + s0.sec)
     + (s0.room ? ' &middot; ' + esc(s0.room) : '') + ' &middot; ' + h1(s0.hours) + 'h</p>'
-    + '<p class="hero-cost">' + cost_line + '</p>'
-    + '<div class="hero-actions">'
-    // No primary button here on purpose. A filled call-to-action reading
-    // "mark absent" is an app nudging you to skip a class. These are three
-    // equal statements of fact, and whichever is already true is disabled.
-    + '<button class="btn" data-mark="' + esc(s0.id) + '" data-to="attended"'
-    + (mark === 'attended' ? ' disabled' : '') + '>' + (mark === 'attended' ? 'Attending' : 'Mark attending') + '</button>'
-    + '<button class="btn" data-mark="' + esc(s0.id) + '" data-to="absent"'
-    + (mark === 'absent' ? ' disabled' : '') + '>' + (mark === 'absent' ? 'Marked absent' : 'Mark absent') + '</button>'
-    + '<button class="btn ghost" data-mark="' + esc(s0.id) + '" data-to="cancelled">Class cancelled</button>'
-    + '</div></section>';
+    + '<p class="hero-cost">' + cost_line + '</p></div>'
+    + heroStat(st)
+    + '<div class="hero-actions"><div class="seg" role="radiogroup" aria-label="Mark this class">' + seg + '</div>'
+    + '<span class="tiny muted">This one class, on ' + esc(prettyDate(s0.date)) + '.</span></div>'
+    + '</section>';
+}
+
+// The next seven days, in the rail. Not a duplicate of the Week grid: the grid
+// answers "where do I have to be", this answers "what is coming and what does
+// each one cost", and it logs from the same click.
+function upNextCard(){
+  const lim = addDays(today(), 7);
+  const rows = upcoming(s => s.date <= lim, 8);
+  if(!rows.length){
+    return '<div class="card"><h2>Next seven days</h2><p class="tiny muted" style="margin:0">'
+      + 'No class between now and ' + prettyDate(lim) + '.</p></div>';
+  }
+  const hours = rows.reduce((a,s) => a + (markOf(s) === 'cancelled' ? 0 : s.hours), 0);
+  return '<div class="card"><h2>Next seven days</h2>'
+    + '<p class="tiny muted" style="margin:0">' + rows.length + ' class' + (rows.length===1?'':'es')
+    + ' &middot; ' + h1(hours) + 'h. Click one to cycle it: attending, absent, cancelled.</p>'
+    + '<ul class="upnext">' + rows.map(s => sessionRow(s, true)).join('') + '</ul></div>';
 }
 
 function countFromCard(){
@@ -755,15 +979,22 @@ function countFromCard(){
     + '<div id="cf-msg"></div></div>';
 }
 
+// Collapsed by default. A per-course bar is set once a semester from a
+// syllabus, and open it was 428px of number inputs sitting above the figures
+// this page is read for. Held and Left still show on every course row.
+let barOpen = false;
 function barCard(all){
-  return '<div class="card"><h2>Attendance bar</h2>'
-    + '<p class="tiny muted">' + Math.round(DEFAULT_THRESHOLD*100) + '% unless a syllabus sets its own.</p>'
+  return '<details class="disclose" id="bar-details"' + (barOpen ? ' open' : '') + '>'
+    + '<summary>Attendance bar &middot; ' + Math.round(DEFAULT_THRESHOLD*100) + '% default</summary>'
+    + '<div class="body">'
+    + '<p class="tiny muted">' + Math.round(DEFAULT_THRESHOLD*100) + '% unless a syllabus sets its own. '
+    + 'Changing one here changes every figure on this page for that course.</p>'
     + '<div class="tablewrap"><table><thead><tr><th>Course</th><th class="num">Bar</th><th class="num">Held</th><th class="num">Left</th></tr></thead><tbody>'
     + all.map(({c, st}) => '<tr><td>' + esc(c.code) + '</td>'
       + '<td class="num"><input type="number" min="1" max="100" step="1" style="width:62px" data-thr="' + esc(c.code) + '" value="' + Math.round(st.thr*100) + '"></td>'
       + '<td class="num">' + h1(st.held) + 'h</td>'
       + '<td class="num">' + hDown(st.budgetHours) + 'h</td></tr>').join('')
-    + '</tbody></table></div></div>';
+    + '</tbody></table></div></div></details>';
 }
 
 // Term progress. Not a duplicate of anything else on the page: the course rows
@@ -777,10 +1008,11 @@ function progressCard(all){
   const span = dayOf(CALENDAR.end);
   const elapsed = Math.max(0, Math.min(dayOf(today()), span));
   return '<div class="card"><h2>Term progress</h2>'
-    + '<div class="bar" role="img" aria-label="' + Math.round(pct*100) + ' percent of scheduled hours already held">'
-    + '<span style="width:' + (pct*100).toFixed(1) + '%"></span></div>'
+    + '<div class="hero-pct" style="font-size:1.9rem">' + Math.round(pct*100) + '%</div>'
+    + '<div class="hero-lab">of the term held</div>'
+    + gauge(pct*100, null, '', Math.round(pct*100) + ' percent of scheduled hours already held')
     + '<p class="tiny muted" style="margin:10px 0 0"><b class="num">' + h1(held) + 'h</b> of <b class="num">'
-    + h1(total) + 'h</b> scheduled has been held, ' + Math.round(pct*100) + '% of the term. <b class="num">'
+    + h1(total) + 'h</b> scheduled has been held. <b class="num">'
     + h1(future) + 'h</b> still to come.</p>'
     + '<p class="tiny muted" style="margin:8px 0 0">Day ' + elapsed + ' of ' + span + '. Ends '
     + prettyDate(CALENDAR.end) + '.</p></div>';
@@ -794,20 +1026,38 @@ function coursesView(){
     const rank = {over:0, close:1, safe:2, none:3};
     return rank[a.st.state] - rank[b.st.state] || (a.st.budgetHours - b.st.budgetHours);
   });
-  const label = {over:'over', close:'close', safe:'ok', none:'not started'};
-  const list = all.map(({c, st}) =>
-    '<article class="course ' + st.state + '" data-course="' + esc(c.code) + '">'
-    + '<div><div class="code">' + esc(c.code) + ' <span class="pill ' + st.state + '">' + label[st.state] + '</span></div>'
-    + '<div class="ttl">' + esc(c.title || '') + '</div></div>'
-    + '<div class="pct">' + (st.pct == null ? 'no data' : pctText(st.pct)) + '</div>'
-    + '<div class="line">' + esc(stateLine(st)) + '</div>'
-    + '<div class="sub">' + h1(st.attended) + 'h attended / ' + h1(st.held) + 'h held &middot; '
-    + h1(st.total) + 'h scheduled &middot; bar ' + Math.round(st.thr*100) + '%</div>'
-    + '</article>').join('');
+  const list = all.map(({c, st}) => {
+    const open = openCourse === c.code;
+    // The bar was a number in 0.75rem grey at the bottom of the row - the one
+    // figure the percentage is judged against, rendered as the smallest thing
+    // on it. The tick is that number, drawn where it falls.
+    const meter = st.pct == null ? ''
+      : '<div class="meter">' + gauge(st.pct*100, st.thr*100, st.state,
+            pctText(st.pct) + ' attended in ' + c.code + ', against a ' + Math.round(st.thr*100) + ' percent bar')
+        + '<em>bar ' + Math.round(st.thr*100) + '%</em></div>';
+    let panel = '';
+    if(open){
+      const next = upcoming(s => s.code === c.code, 10);
+      panel = '<div class="cx">' + (next.length
+        ? '<p class="tiny muted" style="margin:0">Still to come. Click one to cycle it.</p>'
+          + '<ul class="upnext">' + next.map(s => sessionRow(s, true)).join('') + '</ul>'
+        : '<p class="tiny muted" style="margin:0">Nothing left on the calendar for this course.</p>') + '</div>';
+    }
+    return '<article class="course ' + st.state + '" data-course="' + esc(c.code) + '">'
+      + '<div><button class="code" data-course="' + esc(c.code) + '" aria-expanded="' + open + '">'
+      + esc(c.code) + '</button>'
+      + '<div class="ttl">' + esc(c.title || '') + '</div></div>'
+      + '<div class="pct">' + (st.pct == null ? 'no data' : pctText(st.pct)) + '</div>'
+      + '<div class="line">' + esc(stateLine(st)) + '</div>'
+      + meter
+      + '<div class="sub">' + h1(st.attended) + 'h attended / ' + h1(st.held) + 'h held &middot; '
+      + h1(st.total) + 'h scheduled</div>'
+      + panel + '</article>';
+  }).join('');
 
   return '<div class="split"><div>' + heroView()
     + '<h2 style="margin:0 0 12px">Every course</h2>' + list + '</div>'
-    + '<aside class="rail">' + progressCard(all) + barCard(all) + countFromCard() + '</aside></div>';
+    + '<aside class="rail">' + progressCard(all) + upNextCard() + countFromCard() + barCard(all) + '</aside></div>';
 }
 
 // --- Week view -------------------------------------------------------------
@@ -1137,7 +1387,7 @@ function download(obj, name){
 function timeToMin(v){ const p = String(v).split(':'); return (+p[0])*60 + (+p[1]); }
 
 document.addEventListener('click', function(e){
-  const t = e.target.closest('[data-tab],[data-go],[data-sid],[data-week],[data-flip],[data-ed],[data-rmex],[data-arch],button');
+  const t = e.target.closest('[data-tab],[data-go],[data-sid],[data-week],[data-flip],[data-ed],[data-rmex],[data-arch],button,[data-course]');
   if(!t) return;
   const d = t.dataset;
 
@@ -1148,6 +1398,12 @@ document.addEventListener('click', function(e){
     document.documentElement.setAttribute('data-theme', S.theme); save(); return;
   }
   if(d.sid){ cycle(d.sid); render(); return; }
+  // A course row. It carried cursor:pointer and a hover nudge from the start
+  // and did nothing at all when clicked; it opens what is left of the course.
+  if(d.course !== undefined){
+    openCourse = (openCourse === d.course) ? null : d.course;
+    refocus = d.course; render(); return;
+  }
   if(d.week !== undefined){
     const mon = S.week || weekMonday(today());
     S.week = d.week === '0' ? weekMonday(today()) : addDays(mon, d.week === '1' ? 7 : -7);

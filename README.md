@@ -33,7 +33,7 @@ deploy .` puts it on Cloudflare with no changes.
 
 | Tab | What it does |
 |---|---|
-| Courses | Opens on the next class and what skipping it costs. Then every course, its percentage and its remaining leave. A rail carries term progress, the per-course bar, and **Start counting from** |
+| Courses | Opens on the next class, its course's current percentage, and what skipping it costs. Then every course, its percentage drawn against its own bar, expandable to what is still to come. A rail carries term progress, the next seven days, **Start counting from**, and the per-course bar |
 | Week | The timetable as a grid. Click a class to cycle it attended → absent → cancelled. Add a make-up class from the form underneath |
 | Reconcile | Type what the official record says; the app reports the gap and lists sessions you could flip. It never flips one itself |
 | Calendar | Author the semester — term dates, holidays, and the days that run another day's timetable — and copy the constant back into this file |
@@ -69,10 +69,20 @@ Every measure is set in `ch` and every size stepped down from the proportional
 type it replaced, because mono runs perceptibly wider at the same pixel size.
 
 **Adaptive by layout, not by squeezing.** On a phone it is one stacked column
-and the percentage drops below the course code. From 1080px it becomes two
-columns with a sticky settings rail, so the controls stop pushing the answer
-below the fold. The rail carries three real modules rather than one and a canyon
-of empty background.
+and the percentage drops below the course code. From 720px the hero splits in
+two — the sentence on the left, the figure it is about on the right — and from
+1080px the page itself becomes two columns with a sticky rail, so the controls
+stop pushing the answer below the fold. The rail carries four real modules
+rather than one and a canyon of empty background.
+
+**Every percentage is drawn against its own bar, and the distance between them
+is the answer.** One gauge component does this on the hero, on every course row
+and on term progress: the fill is the percentage, the tick is the threshold.
+Before it, the bar a course is judged against rendered as `bar 70%` in 0.75rem
+grey at the bottom edge of the row — the one number the loudest number on the
+page is measured against, set as the smallest thing on it. 57.1% against a 70%
+bar and 100.0% against a 75% bar are now different pictures, not two figures to
+subtract in your head.
 
 ## The things most attendance trackers get wrong
 
@@ -106,7 +116,22 @@ the next class that has not finished yet, when it is, and what missing it costs:
 *"Skipping it costs 2.0h. You would still have 18.0h of leave in ECO354."* The
 three buttons under it are deliberately equal and unfilled. A blue call-to-action
 reading "mark absent" is an app nudging you to skip a class; these are three
-statements of fact, and whichever is already true is the disabled one.
+statements of fact in a segmented control, and whichever is already true is the
+pressed one. It used to be the *disabled* one, which greyed the only accurate
+button on the row down to 45% opacity and made the truth look unavailable.
+
+Next to the sentence sits the figure the sentence is arguing about — the
+course's current percentage, its gauge, and its remaining leave. That was
+missing: the hero's largest type was the course code, and the percentage the
+whole card reasons about existed only in the list below the fold, so the answer
+to "can I skip this" required a scroll.
+
+**A row that looks clickable does something.** Every course row carried a
+pointer cursor and a hover nudge from the first build and had no handler at
+all. Clicking one now opens what is left of that course — the next ten
+sessions, each cycling attending → absent → cancelled on the same click the
+Week grid uses. The toggle is a real button on the course code, so it is
+reachable by keyboard and announced as expanded or collapsed.
 
 **A future class you have already marked absent costs the budget now, not on
 the day it passes.** This was a bug: the budget assumed you would attend every

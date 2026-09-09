@@ -1,0 +1,3 @@
+# Timestamped copies taken before a large edit to the single-file app. Useful
+# on disk, redundant in a repo that already holds every prior version.
+index.backup-*.html
