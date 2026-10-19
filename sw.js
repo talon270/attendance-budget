@@ -27,7 +27,10 @@ self.addEventListener('install', e => {
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
-    .then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k))))
+    // Only this app's own old caches. Every app on talon270.github.io shares one
+    // origin and so one CacheStorage; deleting everything not named CACHE wiped
+    // the other apps' offline copies the first time this one activated.
+    .then(ks => Promise.all(ks.filter(k => k.startsWith('atten-') && k !== CACHE).map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 
