@@ -7,16 +7,17 @@
 <meta name="description" content="How much class you can still miss. Offline, private, no account.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
-<meta name="theme-color" content="#020203">
+<meta name="theme-color" content="#0D1317">
 <script>
 /* Stamped before the body parses, so a returning visitor's palette is the
    first paint rather than a flash of the default. It reads the same key the
-   app writes and understands the two values the old build stored. */
+   app writes and understands every id an older build stored. */
 (function(){try{
-  var ok = {monolith:1, mariana:1, porcelain:1, ink:1};
-  var t  = (JSON.parse(localStorage.getItem('atten.v1')) || {}).theme;
-  if(!ok[t]) t = (t === 'light') ? 'porcelain' : (t === 'dark') ? 'monolith'
-    : (window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches ? 'porcelain' : 'monolith');
+  var ok  = {selene:1, wraith:1, porcelain:1, ink:1};
+  var was = {dark:'selene', monolith:'selene', mariana:'wraith', cryotube:'wraith', light:'porcelain'};
+  var t   = (JSON.parse(localStorage.getItem('atten.v1')) || {}).theme;
+  if(!ok[t]) t = was[t] ||
+    (window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches ? 'porcelain' : 'selene');
   document.documentElement.setAttribute('data-palette', t);
 }catch(e){}})();
 </script>
@@ -50,116 +51,145 @@
 /* ==========================================================================
    ATTENDANCE BUDGET · STYLE
    --------------------------------------------------------------------------
-   · Four palettes, two dark and two light, each a complete token set rather
-     than one derived from another. They are ported from the Study Tracker's
-     twenty-six, and the four were picked by a rule, not by taste - see the
-     comment above the palette blocks.
-   · One accent per palette, used only for interactive things - focus, the
-     active tab, links. Green/amber/red are never decoration: they mean
-     safe / close to the bar / under it, and nothing else may borrow them.
-   · Editorial in layout, monospaced in voice: hairline rules do the dividing,
-     shadows are almost absent, whitespace separates rather than boxes. Every
-     measure is set in ch and every size stepped down from the proportional
-     type it replaced, because mono runs perceptibly wider at the same px.
+   · Soft UI. Every surface is the colour of the ground it sits on, and depth
+     comes from two shadows - a highlight up-left, a shade down-right - rather
+     than from borders. One rule decides which way anything goes: raised means
+     you act on it (cards, buttons, the active tab), pressed means it holds a
+     value (inputs, gauges, wells, the tab track, the chosen option).
+   · Four palettes, two dark and two light, each a complete token set. A
+     palette declares its ground and two shadow colours, --hi and --lo; every
+     shadow on the page is derived from those, so one cannot half-apply.
+   · Two accents per palette, as the Study Tracker has them: --accent for
+     fills, --accent-ink for type and focus. Green/amber/red are never
+     decoration: they mean safe / close to the bar / under it, and nothing
+     else may borrow them. Selene's safe is its own silver - see below.
+   · Soft UI's known failure is an edge made of nothing but a shadow the colour
+     of the page. So focus is a solid accent ring, never a glow, and every
+     status keeps a coloured edge that does not depend on the shadow to read.
    · Adaptive by layout, not by squeezing: one stacked column on a phone, a
      two-column page with a settings rail from 1080px.
    ========================================================================== */
 
 :root{
-  /* Monolith, so the very first paint is a real palette rather than a flash of
+  /* Selene, so the very first paint is a real palette rather than a flash of
      browser defaults. The head script restamps it from storage before the body
      parses; the media query below covers a light system for a first-time
      visitor who has never chosen. */
   color-scheme: dark;
-  --bg:#020203; --bg-2:#050608; --surface:#0D1117; --surface-2:#1E2022;
-  --ink:#F3F5F6; --ink-2:#ECEFF1; --muted:#9098A8;
-  --line:#26282B; --line-2:#363738;
-  --accent:#9FA8DA; --accent-ink:#FFFFFF;
-  --ok:#46C98F; --warn:#D9A441; --bad:#E5705C;
-  --shadow:0 1px 2px rgba(0,0,0,.5), 0 8px 22px -10px rgba(0,0,0,.62);
-  --grain:.045;
+  --bg:#0D1317; --bg-2:#050708; --surface:#0D1317; --surface-2:#1E2022;
+  --ink:#F3F5F6; --ink-2:#ECEFF1; --muted:#A0B0B8;
+  --line:#262B2F; --line-2:#363839;
+  --hi:#1E2022; --lo:#020203;
+  --accent:#CFD8DC; --accent-ink:#DFE5E8; --on-accent:#0B0B0B;
+  --ok:#DFE5E8; --warn:#D9A441; --bad:#E5705C;
+  --grain:.03;
 
-  /* One family, one name. It was three - --sans and --serif aliased to the
-     same stack - and the aliases only made rules read as roles the page no
-     longer has. Contrast between a figure and its label now comes from weight
-     and tracking, which is the only place a monospaced page can get it. */
+  /* One family, one name. Contrast between a figure and its label comes from
+     weight and tracking, which is the only place a monospaced page can get it. */
   --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
 
-  --r-lg:14px; --r-md:10px; --r-sm:7px;
+  /* Rounder than a flat UI needs. A soft shadow on a tight corner pools into
+     a dark blot; at these radii it wraps the corner evenly. */
+  --r-lg:22px; --r-md:16px; --r-sm:11px;
   --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px;
   --z-nav:20; --z-head:30; --z-grain:100;
+  --ease-out:cubic-bezier(.23,1,.32,1);
 }
 @media (prefers-color-scheme: light){
   :root:not([data-palette]){
     color-scheme: light;
-    --bg:#E8EBEE; --bg-2:#E9ECF1; --surface:#FFFFFF; --surface-2:#F2F4F7;
+    --bg:#E8EBEE; --bg-2:#DEE2E7; --surface:#E8EBEE; --surface-2:#EEF1F4;
     --ink:#14171F; --ink-2:#1E2430; --muted:#5C6675;
-    --line:#DCE1E8; --line-2:#B2B7C0;
-    --accent:#2563A8; --accent-ink:#FFFFFF;
+    --line:#D2D7DE; --line-2:#B2B7C0;
+    --hi:#FFFFFF; --lo:#BCC3CD;
+    --accent:#2563A8; --accent-ink:#17457A; --on-accent:#FFFFFF;
     --ok:#2F6B45; --warn:#8A5A0C; --bad:#A33A2A;
-    --shadow:0 1px 2px rgba(30,36,48,.05), 0 6px 18px -8px rgba(30,36,48,.15);
-    --grain:.022;
+    --grain:.018;
   }
 }
 
-/* The four palettes. Ported verbatim from the Study Tracker's token set, which
-   holds twenty-six; these are the four whose accent does not land inside the
-   band --ok / --warn / --bad own. That constraint is not cosmetic. Green means
-   safe, amber means one absence from the bar and red means under it, and an
-   accent borrowing one of those makes the focus ring and the active tab read
-   as a verdict on your attendance. It rules out every warm palette in the
-   Study Tracker - paper's amber sits on --warn, linen's rust and akira's red
-   on --bad, meadow's and nostromo's green on --ok - which is why all four here
-   are cool. */
-:root[data-palette="monolith"]{
+/* The four palettes, ported from the Study Tracker's twenty-six.
+   Green, amber and red are never decoration here: they mean safe, one absence
+   from the bar, and under it. An accent landing inside that band puts a verdict
+   on your attendance into the focus ring and the active tab, which is why every
+   warm palette over there is unusable here - paper's amber sits on --warn,
+   linen's rust and akira's red on --bad, meadow's and nostromo's green on --ok.
+
+   Every colour in all four is from the Study Tracker's own token set -
+   nothing is invented, only the roles move. Soft UI needs a ground with room
+   on both sides of it, and the Study Tracker's page ground has none below.
+   So its card surface is the ground here; its page ground becomes the recess
+   (gauge grooves, wells), and its bg-deep and raised surface become the
+   shade and the highlight. Text, hairlines, both accents and all three
+   status colours are its own, unchanged.
+
+   Two accents, split the way the Study Tracker splits them. --accent is a
+   fill: the primary button, the hero stripe, a gauge with no verdict.
+   --accent-ink is the text accent: links, the focus ring, card headings, the
+   today column, anything drawn as a line of type. On a dark palette it is a
+   step lighter than the fill and on a light one a step darker, so it holds
+   its contrast as text either way. --on-accent is what sits on the fill.
+
+   Selene's --ok is its own #DFE5E8, not a green. On Selene, safe is silver -
+   the same colour as its text accent - and only close and under take a hue.
+   That is the palette as the Study Tracker draws it; picking Selene means
+   picking a page where the only colour is a warning. */
+:root[data-palette="selene"]{
   color-scheme: dark;
-  --bg:#020203; --bg-2:#050608; --surface:#0D1117; --surface-2:#1E2022;
-  --ink:#F3F5F6; --ink-2:#ECEFF1; --muted:#9098A8;
-  --line:#26282B; --line-2:#363738;
-  --accent:#9FA8DA; --accent-ink:#FFFFFF;
-  --ok:#46C98F; --warn:#D9A441; --bad:#E5705C;
-  --shadow:0 1px 2px rgba(0,0,0,.5), 0 8px 22px -10px rgba(0,0,0,.62);
-  --grain:.045;
+  --bg:#0D1317; --bg-2:#050708; --surface:#0D1317; --surface-2:#1E2022;
+  --ink:#F3F5F6; --ink-2:#ECEFF1; --muted:#A0B0B8;
+  --line:#262B2F; --line-2:#363839;
+  --hi:#1E2022; --lo:#020203;
+  --accent:#CFD8DC; --accent-ink:#DFE5E8; --on-accent:#0B0B0B;
+  --ok:#DFE5E8; --warn:#D9A441; --bad:#E5705C;
+  --grain:.03;
 }
-:root[data-palette="mariana"]{
+:root[data-palette="wraith"]{
   color-scheme: dark;
-  --bg:#010203; --bg-2:#030708; --surface:#0A1317; --surface-2:#1C2022;
-  --ink:#CDF2F7; --ink-2:#B2EBF2; --muted:#8090A8;
-  --line:#202A2F; --line-2:#343739;
-  --accent:#26C6DA; --accent-ink:#0B0B0B;
+  --bg:#0D1317; --bg-2:#050708; --surface:#0D1317; --surface-2:#1E2022;
+  --ink:#F3F5F6; --ink-2:#ECEFF1; --muted:#B8C8D0;
+  --line:#262C2F; --line-2:#363839;
+  --hi:#1E2022; --lo:#020203;
+  --accent:#B2EBF2; --accent-ink:#CCF2F6; --on-accent:#0B0B0B;
   --ok:#46C98F; --warn:#D9A441; --bad:#E5705C;
-  --shadow:0 1px 2px rgba(0,0,0,.5), 0 8px 22px -10px rgba(0,0,0,.62);
-  --grain:.045;
+  --grain:.03;
 }
 :root[data-palette="porcelain"]{
   color-scheme: light;
-  --bg:#E8EBEE; --bg-2:#E9ECF1; --surface:#FFFFFF; --surface-2:#F2F4F7;
+  --bg:#E8EBEE; --bg-2:#DEE2E7; --surface:#E8EBEE; --surface-2:#EEF1F4;
   --ink:#14171F; --ink-2:#1E2430; --muted:#5C6675;
-  --line:#DCE1E8; --line-2:#B2B7C0;
-  --accent:#2563A8; --accent-ink:#FFFFFF;
+  --line:#D2D7DE; --line-2:#B2B7C0;
+  --hi:#FFFFFF; --lo:#BCC3CD;
+  --accent:#2563A8; --accent-ink:#17457A; --on-accent:#FFFFFF;
   --ok:#2F6B45; --warn:#8A5A0C; --bad:#A33A2A;
-  --shadow:0 1px 2px rgba(30,36,48,.05), 0 6px 18px -8px rgba(30,36,48,.15);
-  --grain:.022;
+  --grain:.018;
 }
 :root[data-palette="ink"]{
   color-scheme: light;
-  --bg:#EAEAEE; --bg-2:#EAEAF0; --surface:#FDFDFF; --surface-2:#F4F4F7;
+  --bg:#E9E9EE; --bg-2:#DFDFE6; --surface:#E9E9EE; --surface-2:#F0F0F4;
   --ink:#121219; --ink-2:#1B1B26; --muted:#5B5B6B;
-  --line:#DEDEE6; --line-2:#B3B3BC;
-  --accent:#3B3F8F; --accent-ink:#FFFFFF;
+  --line:#D4D4DD; --line-2:#B3B3BC;
+  --hi:#FFFFFF; --lo:#C0C0CC;
+  --accent:#3B3F8F; --accent-ink:#242766; --on-accent:#FFFFFF;
   --ok:#2F6B45; --warn:#8A5A0C; --bad:#A33A2A;
-  --shadow:0 1px 2px rgba(27,27,38,.05), 0 6px 18px -8px rgba(27,27,38,.15);
-  --grain:.022;
+  --grain:.018;
 }
 
-/* Derived, so a palette only ever declares the colour and never its washes.
-   A wash is the status colour mixed into the recessed surface, which keeps a
-   banner legible on a near-black ground and on a near-white one from the same
-   one line. */
+/* Derived, so a palette only ever declares colours and never their washes or
+   shadows. Declared on :root, where the palette tokens also live, so each one
+   resolves against the active palette.
+   Six depths and no more: xs for anything under 30px tall, where a deep
+   shadow would be taller than the thing casting it. */
 :root{
   --ok-soft:color-mix(in srgb, var(--ok) 17%, var(--bg-2));
   --warn-soft:color-mix(in srgb, var(--warn) 17%, var(--bg-2));
   --bad-soft:color-mix(in srgb, var(--bad) 17%, var(--bg-2));
+  --raise-xs:2px 2px 4px var(--lo), -2px -2px 4px var(--hi);
+  --raise-sm:4px 4px 10px var(--lo), -4px -4px 10px var(--hi);
+  --raise:7px 7px 18px var(--lo), -7px -7px 18px var(--hi);
+  --raise-lg:11px 11px 28px var(--lo), -11px -11px 28px var(--hi);
+  --press-sm:inset 2px 2px 5px var(--lo), inset -2px -2px 5px var(--hi);
+  --press:inset 4px 4px 10px var(--lo), inset -4px -4px 10px var(--hi);
 }
 
 *,*::before,*::after{box-sizing:border-box}
@@ -170,23 +200,29 @@ body{
   font:400 0.885rem/1.62 var(--mono);
   font-synthesis-weight:none;
 }
-/* Grain. Flat dark surfaces read as dead pixels; a little tooth stops that.
-   Fixed and inert so it never intercepts a click or moves on scroll. */
+/* Grain. A little tooth stops a large soft surface reading as a gradient
+   rendering bug. Fixed and inert so it never intercepts a click. */
 body::after{
   content:""; position:fixed; inset:0; z-index:var(--z-grain); pointer-events:none;
   opacity:var(--grain); mix-blend-mode:overlay;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
 }
-@media print{ body::after{display:none} }
+@media print{ body::after{display:none} *{box-shadow:none !important} }
 
 h1,h2,h3{margin:0; font-weight:600; line-height:1.2; letter-spacing:-.01em}
 h1{font:600 1.02rem/1.2 var(--mono)}
-h2{font:500 .7rem/1.3 var(--mono); letter-spacing:.055em; text-transform:uppercase; color:var(--muted)}
+h2{font:500 .7rem/1.3 var(--mono); letter-spacing:.055em; text-transform:uppercase; color:var(--accent-ink)}
 h3{font:600 1.02rem/1.25 var(--mono)}
 p{margin:0 0 var(--s3); max-width:58ch; text-wrap:pretty}
-a{color:var(--accent); text-underline-offset:3px; text-decoration-thickness:1px}
+a{color:var(--accent-ink); text-underline-offset:3px; text-decoration-thickness:1px}
+::selection{background:color-mix(in srgb, var(--accent) 26%, transparent); color:var(--ink)}
 code,pre{font-family:var(--mono); font-size:.88em}
-:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:3px}
+/* A ring, not a glow. A glow is one more soft shadow on a page made of them,
+   and keyboard focus is the one state that must never be ambiguous. The ring
+   follows each element's own radius; it no longer forces 3px corners onto a
+   rounded button. */
+:focus-visible{outline:2px solid var(--accent-ink); outline-offset:3px}
+a:focus-visible{border-radius:3px}
 
 /* Numbers are the content. Tabular everywhere so a column of them lines up,
    and slashed zero so 0 and O never read alike in a course code sitting beside
@@ -194,88 +230,110 @@ code,pre{font-family:var(--mono); font-size:.88em}
 .num,.pct,td.num,th.num{font-variant-numeric:tabular-nums slashed-zero}
 
 .wrap{width:min(100% - 2.5rem, 1180px); margin-inline:auto}
-.skip{position:absolute; left:-9999px; top:0; background:var(--accent); color:var(--accent-ink);
+.skip{position:absolute; left:-9999px; top:0; background:var(--accent); color:var(--on-accent);
   padding:var(--s2) var(--s4); border-radius:0 0 var(--r-sm) 0; z-index:200; font-weight:600}
 .skip:focus{left:0}
 
 /* ---------- palette picker ----------
-   Four palettes is too few to deserve a menu. Each swatch shows the two
-   colours that actually differ - the ground it paints and the accent it puts
-   on top - so the choice is made by looking rather than by reading a name.
-   The swatch colours are literals on purpose: they have to render the palette
-   they switch to, not the one currently applied. */
-.swatches{display:flex; align-items:center; gap:var(--s2)}
-.sw-set{display:flex; gap:5px}
+   Four swatches in a sunken tray. Each shows the two colours that actually
+   differ - the ground it paints and the accent it puts on top - so the choice
+   is made by looking rather than by reading a name. The swatch colours are
+   literals on purpose: they render the palette they switch to, not the one
+   currently applied. The chosen one gets a ring, not a shadow, because a
+   shadow in this palette's colours would be wrong on another palette's ground. */
+.swatches{display:flex; align-items:center; gap:var(--s3)}
+.sw-set{display:flex; gap:8px; padding:6px; border-radius:14px; box-shadow:var(--press-sm)}
 .sw{
-  width:24px; height:24px; padding:0; border-radius:8px; cursor:pointer; position:relative;
-  background:var(--sw-bg); border:1px solid var(--line-2);
-  transition:transform .14s ease, border-color .16s ease, box-shadow .16s ease;
+  width:24px; height:24px; padding:0; border:0; border-radius:8px; cursor:pointer; position:relative;
+  background:var(--sw-bg); box-shadow:var(--raise-xs);
+  transition:transform .12s var(--ease-out), box-shadow .16s ease;
 }
-.sw::after{content:""; position:absolute; inset:6px; border-radius:50%; background:var(--sw-ac)}
-.sw:hover{transform:translateY(-1px); border-color:var(--muted)}
-.sw[aria-checked="true"]{border-color:var(--accent);
-  box-shadow:0 0 0 2px color-mix(in srgb, var(--accent) 32%, transparent)}
-.sw[data-pal="monolith"]{--sw-bg:#050608; --sw-ac:#9FA8DA}
-.sw[data-pal="mariana"]{--sw-bg:#030708; --sw-ac:#26C6DA}
-.sw[data-pal="porcelain"]{--sw-bg:#F2F4F7; --sw-ac:#2563A8}
-.sw[data-pal="ink"]{--sw-bg:#F4F4F7; --sw-ac:#3B3F8F}
+.sw::after{content:""; position:absolute; inset:7px; border-radius:50%; background:var(--sw-ac)}
+.sw:active{transform:scale(.92)}
+.sw[aria-checked="true"]{box-shadow:0 0 0 2px var(--bg), 0 0 0 4px var(--accent-ink)}
+.sw[data-pal="selene"]{--sw-bg:#0D1317; --sw-ac:#CFD8DC}
+.sw[data-pal="wraith"]{--sw-bg:#0D1317; --sw-ac:#B2EBF2}
+.sw[data-pal="porcelain"]{--sw-bg:#E8EBEE; --sw-ac:#2563A8}
+.sw[data-pal="ink"]{--sw-bg:#E9E9EE; --sw-ac:#3B3F8F}
 .sw-name{font-size:.74rem; color:var(--muted); letter-spacing:.02em; min-width:8ch}
 @media (max-width:560px){ .sw-name{display:none} }
 
-/* ---------- chrome ---------- */
-header.top{position:sticky; top:0; z-index:var(--z-head); background:color-mix(in srgb, var(--bg) 88%, transparent);
-  backdrop-filter:blur(12px) saturate(1.1); border-bottom:1px solid var(--line)}
+/* ---------- chrome ----------
+   The header and tab strip are the page's own ground, so what scrolls under
+   them needs something to pass beneath: one soft shade along the bottom edge
+   of the tab strip, and no hairline anywhere. */
+header.top{position:sticky; top:0; z-index:var(--z-head); background:color-mix(in srgb, var(--bg) 90%, transparent);
+  backdrop-filter:blur(12px) saturate(1.1)}
 header.top .wrap{display:flex; align-items:center; gap:var(--s4); min-height:60px}
 .brand{margin-right:auto; display:flex; flex-direction:column; gap:1px}
 .brand b{font:600 .98rem/1.15 var(--mono); letter-spacing:-.01em}
 .brand small{font-size:.72rem; color:var(--muted); letter-spacing:.02em}
 
-nav.tabs{position:sticky; top:60px; z-index:var(--z-nav); background:var(--bg); border-bottom:1px solid var(--line)}
-nav.tabs .wrap{display:flex; gap:var(--s1); overflow-x:auto; scrollbar-width:none}
-nav.tabs .wrap::-webkit-scrollbar{display:none}
-nav.tabs button{
-  position:relative; background:none; border:0; color:var(--muted); cursor:pointer; white-space:nowrap;
-  font:500 .87rem/1 var(--mono); padding:14px 12px 13px; transition:color .18s ease;
+/* The tabs are a sunken track with the current one standing up out of it -
+   the same raised/pressed rule as everything else, so the page you are on is
+   the one thing in the strip you could press. Heights are fixed in px because
+   the rail's sticky offset below is computed from them: 8 + 42 + 8 = 58. */
+nav.tabs{position:sticky; top:60px; z-index:var(--z-nav); background:var(--bg); padding-block:8px;
+  box-shadow:0 12px 14px -14px var(--lo)}
+nav.tabs .wrap{display:flex}
+.tabtrack{display:flex; gap:4px; max-width:100%; overflow-x:auto; scrollbar-width:none;
+  padding:6px; border-radius:15px; box-shadow:var(--press)}
+.tabtrack::-webkit-scrollbar{display:none}
+.tabtrack button{
+  position:relative; flex:none; background:none; border:0; border-radius:10px; color:var(--muted);
+  cursor:pointer; white-space:nowrap; font:500 .84rem/14px var(--mono); padding:8px 15px;
+  transition:color .16s ease;
 }
-nav.tabs button::after{
-  content:""; position:absolute; left:12px; right:12px; bottom:0; height:2px; border-radius:2px 2px 0 0;
-  background:var(--accent); transform:scaleX(0); transform-origin:center; transition:transform .22s ease;
-}
-nav.tabs button:hover{color:var(--ink-2)}
-nav.tabs button[aria-current="page"]{color:var(--ink)}
-nav.tabs button[aria-current="page"]::after{transform:scaleX(1)}
+.tabtrack button:hover{color:var(--ink-2)}
+/* A count on a tab - classes to check, days planned - so the work waiting is
+   visible from any tab. Accent, never warn: a number to check is not a verdict. */
+.tabn{display:inline-block; min-width:1.5em; margin-left:5px; padding:1px 5px; border-radius:99px; font-size:.68rem; line-height:1.4;
+  text-align:center; background:var(--accent); color:var(--on-accent); font-weight:600; font-variant-numeric:tabular-nums}
+.tabtrack button[aria-current="page"]{color:var(--ink); background:var(--bg); box-shadow:var(--raise-xs)}
+.tabtrack button[aria-current="page"]::after{content:""; position:absolute; left:15px; right:15px; bottom:4px;
+  height:2px; border-radius:2px; background:var(--accent)}
 
 main{padding:var(--s5) 0 var(--s7)}
-footer.bot{border-top:1px solid var(--line); color:var(--muted); font-size:.78rem; padding:var(--s5) 0 var(--s7)}
+footer.bot{color:var(--muted); font-size:.78rem; padding:var(--s5) 0 var(--s7)}
 footer.bot p{margin:0}
 
-/* ---------- controls ---------- */
+/* ---------- controls ----------
+   A button stands up and sinks when pressed. The press is two things at once -
+   the shadow turns inward and the face shrinks 2% - because either alone reads
+   as a flicker at 120ms. */
 button,select,input,textarea{font:inherit; color:inherit}
 .btn{
-  display:inline-flex; align-items:center; gap:var(--s2); background:var(--surface-2); color:var(--ink);
-  border:1px solid var(--line-2); border-radius:var(--r-sm); padding:8px 13px; cursor:pointer;
-  font:500 .87rem/1.2 var(--mono);
-  transition:background .16s ease, border-color .16s ease, transform .12s ease;
+  display:inline-flex; align-items:center; gap:var(--s2); background:var(--bg); color:var(--ink);
+  border:0; border-radius:var(--r-sm); padding:9px 15px; cursor:pointer;
+  font:500 .87rem/1.2 var(--mono); box-shadow:var(--raise-sm);
+  transition:box-shadow .18s var(--ease-out), transform .12s var(--ease-out), color .16s ease;
 }
-.btn:hover{border-color:var(--accent); background:var(--surface)}
-.btn:active{transform:translateY(1px)}
-.btn.primary{background:var(--accent); color:var(--accent-ink); border-color:var(--accent); font-weight:600}
-.btn.primary:hover{filter:brightness(1.08)}
-.btn.small{padding:5px 10px; font-size:.8rem}
-.btn.ghost{background:none; border-color:transparent; color:var(--muted)}
-.btn.ghost:hover{color:var(--ink); border-color:var(--line-2)}
-.btn:disabled{opacity:.45; cursor:default; transform:none}
+.btn:hover{box-shadow:var(--raise)}
+.btn:active{box-shadow:var(--press-sm); transform:scale(.98)}
+.btn.primary{background:var(--accent); color:var(--on-accent); font-weight:600}
+.btn.small{padding:6px 12px; font-size:.8rem; border-radius:9px}
+.btn.ghost{box-shadow:none; color:var(--muted)}
+.btn.ghost:hover{color:var(--ink); box-shadow:var(--raise-xs)}
+.btn:disabled{opacity:.45; cursor:default; transform:none; box-shadow:none}
+
 input[type=text],input[type=date],input[type=time],input[type=number],select,textarea,input[type=file]{
-  background:var(--bg-2); border:1px solid var(--line-2); border-radius:var(--r-sm); padding:8px 10px;
-  transition:border-color .16s ease;
+  background:var(--bg); border:0; border-radius:var(--r-sm); padding:9px 12px; box-shadow:var(--press-sm);
+  transition:box-shadow .16s ease;
 }
-input:hover,select:hover{border-color:var(--muted)}
-label.field{display:flex; flex-direction:column; gap:5px; font:500 .68rem/1 var(--mono);
+input:hover,select:hover{box-shadow:var(--press)}
+select{cursor:pointer}
+input[type=file]{padding:6px; max-width:100%}
+input[type=file]::file-selector-button{
+  font:500 .8rem/1.2 var(--mono); color:var(--ink); background:var(--bg); border:0; border-radius:8px;
+  padding:6px 12px; margin-right:10px; cursor:pointer; box-shadow:var(--raise-xs);
+}
+input[type=file]::file-selector-button:active{box-shadow:var(--press-sm)}
+label.field{display:flex; flex-direction:column; gap:6px; font:500 .68rem/1 var(--mono);
   letter-spacing:.03em; text-transform:uppercase; color:var(--muted)}
 label.field > *{text-transform:none; letter-spacing:0; font-size:.95rem; font-weight:400}
 
-.card{background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg);
-  padding:var(--s5); margin:0 0 var(--s4); box-shadow:var(--shadow)}
+.card{background:var(--surface); border-radius:var(--r-lg); padding:var(--s5); margin:0 0 var(--s5);
+  box-shadow:var(--raise)}
 .card > h2{margin-bottom:var(--s3)}
 .muted{color:var(--muted)}
 .tiny{font-size:.79rem; line-height:1.5}
@@ -287,26 +345,32 @@ label.field > *{text-transform:none; letter-spacing:0; font-size:.95rem; font-we
 /* ---------- banners ----------
    Persistent and undismissable when they describe a number that could be
    wrong. A tidy page is not worth a student failing a bar this app told them
-   they had room under. */
-.banner{border-radius:var(--r-md); padding:var(--s3) var(--s4); margin:0 0 var(--s3);
-  border:1px solid; border-left-width:3px; font-size:.82rem; line-height:1.6; max-width:64ch}
+   they had room under. Sunk into the page rather than raised off it, tinted,
+   bordered and striped: on a soft page the thing that must be read first is
+   the one place colour is allowed to be loud. */
+.banner,.msg{position:relative; color:var(--ink); border-radius:var(--r-md);
+  background:color-mix(in srgb, var(--tone) 17%, var(--bg-2));
+  border:1px solid color-mix(in srgb, var(--tone) 45%, transparent); box-shadow:var(--press-sm)}
+.banner::before,.msg::before{content:""; position:absolute; left:7px; top:9px; bottom:9px; width:3px;
+  border-radius:3px; background:var(--tone)}
+.banner{padding:var(--s3) var(--s4) var(--s3) 20px; margin:0 0 var(--s4); font-size:.82rem; line-height:1.6; max-width:64ch}
 .banner b{display:block; font-weight:600; margin-bottom:2px; font-size:.9rem}
-.banner.warn{background:var(--warn-soft); border-color:var(--warn); color:var(--ink)}
-.banner.bad{background:var(--bad-soft); border-color:var(--bad); color:var(--ink)}
+.banner.warn{--tone:var(--warn)} .banner.bad{--tone:var(--bad)}
 
 /* ---------- the hero: can I skip the next one ----------
    Two columns from 720px: the sentence on the left, the figure it is about on
-   the right. It used to be one column capped at 46ch inside a 690px card, so
-   276px of every hero was empty and the percentage the sentence argues about
-   was not on screen at all - you had to scroll into the list to find it. */
-.hero{background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg);
-  padding:var(--s5); margin:0 0 var(--s5); box-shadow:var(--shadow); position:relative; overflow:hidden;
-  display:grid; grid-template-columns:minmax(0,1fr); gap:var(--s4) var(--s6)}
-@media (min-width:720px){ .hero{grid-template-columns:minmax(0,1fr) minmax(210px,auto)} }
-.hero::before{content:""; position:absolute; inset:0 auto 0 0; width:3px; background:var(--accent)}
+   the right, sunk into a well so the one number the sentence argues about has
+   an edge of its own. The deepest shadow on the page belongs to this card,
+   because it is the question the page is opened for. */
+.hero{position:relative; background:var(--surface); border-radius:var(--r-lg);
+  padding:var(--s5) var(--s5) var(--s5) 34px; margin:0 0 var(--s6); box-shadow:var(--raise-lg);
+  display:grid; grid-template-columns:minmax(0,1fr); gap:var(--s4) var(--s5)}
+@media (min-width:720px){ .hero{grid-template-columns:minmax(0,1fr) minmax(230px,auto)} }
+.hero::before{content:""; position:absolute; left:13px; top:22px; bottom:22px; width:4px; border-radius:4px;
+  background:var(--accent)}
 .hero.safe::before{background:var(--ok)} .hero.close::before{background:var(--warn)} .hero.over::before{background:var(--bad)}
 .hero-main{grid-column:1; min-width:0}
-.hero-k{font:500 .7rem/1 var(--mono); letter-spacing:.07em; text-transform:uppercase; color:var(--muted)}
+.hero-k{font:500 .7rem/1 var(--mono); letter-spacing:.07em; text-transform:uppercase; color:var(--accent-ink)}
 .hero-when{color:var(--ink-2); font-weight:500; letter-spacing:0; text-transform:none; font-size:.8rem}
 .hero-code{font:700 clamp(1.45rem,4vw,1.95rem)/1.1 var(--mono); letter-spacing:-.035em; margin:var(--s3) 0 2px}
 .hero-title{color:var(--ink-2); font-size:.9rem; margin:0 0 var(--s3)}
@@ -316,11 +380,9 @@ label.field > *{text-transform:none; letter-spacing:0; font-size:.95rem; font-we
 .hero-none{color:var(--ink-2)}
 
 /* The right column. Same weight of type as a course row's percentage, because
-   it is the same fact about the same course - it was only ever missing here. */
-.hero-stat{grid-column:1; padding:var(--s3) 0 0; border-top:1px solid var(--line)}
-@media (min-width:720px){
-  .hero-stat{grid-column:2; grid-row:1; padding:0 0 0 var(--s5); border-top:0; border-left:1px solid var(--line)}
-}
+   it is the same fact about the same course. */
+.hero-stat{grid-column:1; padding:var(--s4) var(--s4) var(--s3); border-radius:var(--r-md); box-shadow:var(--press)}
+@media (min-width:720px){ .hero-stat{grid-column:2; grid-row:1} }
 .hero-pct{font:700 clamp(1.7rem,5vw,2.3rem)/1 var(--mono); letter-spacing:-.045em;
   font-variant-numeric:tabular-nums slashed-zero}
 .hero-stat.safe .hero-pct{color:var(--ok)} .hero-stat.close .hero-pct{color:var(--warn)}
@@ -328,35 +390,35 @@ label.field > *{text-transform:none; letter-spacing:0; font-size:.95rem; font-we
 .hero-stat.nodata .hero-pct{font-size:1rem; font-weight:500; letter-spacing:0; color:var(--muted)}
 .hero-lab{font:500 .68rem/1.4 var(--mono); letter-spacing:.05em; text-transform:uppercase;
   color:var(--muted); margin:5px 0 var(--s3)}
-.hero-stat .gauge{margin-bottom:7px}
-.hero-fig{font-size:.79rem; color:var(--ink-2); line-height:1.5}
+.hero-stat .gauge{margin-bottom:9px}
+.hero-fig{font-size:.79rem; color:var(--ink-2); line-height:1.5; margin:0}
 .hero-fig b{color:var(--ink); font-weight:700; font-variant-numeric:tabular-nums slashed-zero}
-.hero-actions{grid-column:1/-1; display:flex; gap:var(--s3); flex-wrap:wrap; align-items:center;
-  padding-top:var(--s4); border-top:1px solid var(--line)}
+.hero-actions{grid-column:1/-1; display:flex; gap:var(--s3) var(--s4); flex-wrap:wrap; align-items:center; padding-top:var(--s1)}
 
 /* ---------- segmented control ----------
-   Three statements of fact, one of which is already true. It used to render the
-   true one `disabled` at 45% opacity, so the only accurate button on the row
-   looked like the broken one. Pressed, not disabled: still clickable, visibly
-   the current answer, and no filled call-to-action reading "mark absent". */
-.seg{display:inline-flex; background:var(--bg-2); border:1px solid var(--line-2);
-  border-radius:9px; padding:3px; gap:2px}
-.seg button{background:none; border:0; border-radius:6px; padding:7px 13px; cursor:pointer;
+   Three statements of fact, one of which is already true. The true one stands
+   up out of the track: pressed would be the natural word, but on this page
+   raised is what "chosen" looks like, the same as the active tab. Still
+   clickable, never disabled, and no filled call-to-action reading
+   "mark absent". */
+.seg{display:inline-flex; max-width:100%; border-radius:14px; padding:5px; gap:4px; box-shadow:var(--press)}
+.seg button{background:none; border:0; border-radius:10px; padding:8px 14px; cursor:pointer;
   color:var(--muted); font:500 .84rem/1.2 var(--mono); white-space:nowrap;
-  transition:background .16s ease, color .16s ease}
+  transition:color .16s ease, transform .12s var(--ease-out)}
 .seg button:hover{color:var(--ink)}
-.seg button[aria-checked="true"]{background:var(--surface); color:var(--ink); box-shadow:var(--shadow)}
+.seg button:active{transform:scale(.97)}
+.seg button[aria-checked="true"]{background:var(--surface); color:var(--ink); box-shadow:var(--raise-xs)}
 .seg button.on-att[aria-checked="true"]{color:var(--ok)}
 .seg button.on-abs[aria-checked="true"]{color:var(--bad)}
 .seg button.on-can[aria-checked="true"]{color:var(--muted); text-decoration:line-through}
 
 /* ---------- gauge ----------
    One component, used on the hero, on every course row and on term progress.
-   The tick is the threshold. A bare percentage never said how far it was from
-   the bar it is judged against; the distance between fill and tick is the
-   whole answer, and it is the only thing on the page drawn to scale. */
-.gauge{position:relative; height:8px; border-radius:99px; background:var(--bg-2);
-  border:1px solid var(--line)}
+   The tick is the threshold; the distance between fill and tick is the whole
+   answer, and it is the only thing on the page drawn to scale. So the fill
+   runs edge to edge of the groove rather than inset from it - an inset would
+   shift the fill 2px off the tick it is measured against. */
+.gauge{position:relative; height:10px; border-radius:99px; background:var(--bg-2); box-shadow:var(--press-sm)}
 .gauge i{position:absolute; inset:0 auto 0 0; border-radius:99px; background:var(--accent)}
 .gauge b{position:absolute; top:-4px; bottom:-4px; width:2px; border-radius:1px;
   background:var(--ink-2); transform:translateX(-1px)}
@@ -367,116 +429,141 @@ label.field > *{text-transform:none; letter-spacing:0; font-size:.95rem; font-we
 }
 
 /* ---------- course rows ----------
-   A rule and a status edge, not a box inside a box. The percentage is the
-   loudest thing on the row because it is what the page is for. */
-.course{
-  position:relative; display:grid; gap:var(--s2) var(--s5); align-items:start;
-  grid-template-columns:1fr auto;
-  padding:var(--s4) var(--s4) var(--s4) var(--s5); margin:0 0 var(--s2);
-  background:var(--surface); border:1px solid var(--line); border-radius:var(--r-md);
-  cursor:pointer; transition:border-color .18s ease, background .18s ease, transform .18s ease;
-}
-/* The row was already cursor:pointer with a hover nudge and no click handler -
-   an affordance that promised something and did nothing. It opens now. */
-
-.course{border-left:3px solid var(--line-2)}
-.course:hover{border-color:var(--line-2); background:var(--surface-2); transform:translateX(2px)}
-.course.safe{border-left-color:var(--ok)} .course.close{border-left-color:var(--warn)}
-.course.over{border-left-color:var(--bad)} .course.none{border-left-color:var(--line-2)}
-/* The toggle is a real button on the code, so it is reachable and announced.
-   The rest of the row still opens on click - the article carries the same
-   data-course - but the article is not itself declared a button, because it
-   contains the session buttons of the panel it opens. */
-.course .code{font:600 1.05rem/1.2 var(--mono); letter-spacing:-.01em; font-variant-numeric:slashed-zero;
-  background:none; border:0; padding:0; color:inherit; cursor:pointer; text-align:left;
-  border-bottom:1px solid transparent; transition:border-color .16s ease}
-.course .code{display:inline-flex; align-items:center; gap:var(--s2)}
-.course .code:hover{border-bottom-color:var(--line-2)}
+   One compact row per course, so every course's figures sit above the fold:
+   course, attendance with its bar, leave in classes, missed so far, next
+   class. A row opens in place to its whole term. The status stripe stops short
+   of both corners so it reads as a mark rather than a border the radius bent.
+   Rows sit 12px apart - closer and one row's shade lands on the next. */
+.chead,.crow{display:grid; gap:var(--s2) var(--s4); align-items:center;
+  grid-template-columns:minmax(0,1.25fr) minmax(0,1.15fr) minmax(0,1fr) minmax(0,.6fr) minmax(0,.95fr)}
+.chead{padding:0 var(--s5) 6px 30px; font:600 .62rem/1.3 var(--mono); letter-spacing:.05em; text-transform:uppercase; color:var(--muted)}
+.course{position:relative; margin:0 0 var(--s3); background:var(--surface); border-radius:var(--r-md); box-shadow:var(--raise-sm);
+  transition:box-shadow .22s var(--ease-out)}
+.course::before{content:""; position:absolute; left:11px; top:14px; bottom:14px; width:3px; border-radius:3px; background:var(--line-2)}
+.course.safe::before{background:var(--ok)} .course.close::before{background:var(--warn)} .course.over::before{background:var(--bad)}
+.crow{padding:var(--s3) var(--s5) var(--s3) 30px; cursor:pointer}
+@media (hover:hover) and (pointer:fine){ .course:hover{box-shadow:var(--raise)} }
+.course .code{display:inline-flex; align-items:center; gap:var(--s2);
+  font:600 1rem/1.2 var(--mono); letter-spacing:-.01em; font-variant-numeric:slashed-zero;
+  background:none; border:0; padding:0; color:inherit; cursor:pointer; text-align:left}
 .course .code::after{content:""; width:6px; height:6px; flex:none; margin-top:-3px;
   border-right:1.5px solid var(--muted); border-bottom:1.5px solid var(--muted);
-  transform:rotate(45deg); transition:transform .2s ease, border-color .2s ease}
-.course:hover .code::after{border-color:var(--ink-2)}
-.course .code[aria-expanded="true"]::after{transform:rotate(-135deg); margin-top:2px; border-color:var(--accent)}
-.course .ttl{color:var(--muted); font-size:.86rem; font-weight:400}
-.course .pct{grid-column:2; grid-row:1 / span 2; align-self:center; text-align:right;
-  font:700 clamp(1.5rem,4.2vw,2.05rem)/1 var(--mono); letter-spacing:-.04em; color:var(--ink);
-  font-variant-numeric:tabular-nums slashed-zero}
+  transform:rotate(45deg); transition:transform .2s var(--ease-out), border-color .2s ease}
+.course .code[aria-expanded="true"]::after{transform:rotate(-135deg); margin-top:2px; border-color:var(--accent-ink)}
+.course .ttl{color:var(--muted); font-size:.72rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.cpct{display:flex; flex-direction:column; gap:6px}
+.cpct .pct{font:700 1.25rem/1 var(--mono); letter-spacing:-.03em; font-variant-numeric:tabular-nums slashed-zero}
 .course.safe .pct{color:var(--ok)} .course.close .pct{color:var(--warn)} .course.over .pct{color:var(--bad)}
-.course.none .pct{font-size:1rem; color:var(--muted); font-family:var(--mono); font-weight:500}
-.course .line{grid-column:1; font-size:.83rem; color:var(--ink-2); line-height:1.55; max-width:50ch}
-.course .sub{grid-column:1 / -1; font-family:var(--mono); font-size:.75rem; color:var(--muted);
-  padding-top:var(--s2); border-top:1px solid var(--line)}
-.course .meter{grid-column:1 / -1; display:flex; align-items:center; gap:var(--s3); margin-top:2px}
+.course.none .pct{font-size:.85rem; color:var(--muted); font-weight:500}
+.cfig{font-size:.8rem; line-height:1.35; font-variant-numeric:tabular-nums slashed-zero}
+.cfig b{display:block; font-weight:700; font-size:.92rem; color:var(--ink)}
+.cfig span{color:var(--muted)}
+.course.close .cleave b{color:var(--warn)} .course.over .cleave b{color:var(--bad)}
+.cfig .lab{display:none}
+.course .cx{padding:var(--s3) var(--s5) var(--s4) 30px; border-top:1px solid var(--line)}
+.course .line{font-size:.84rem; color:var(--ink-2); line-height:1.55; max-width:62ch; margin:0 0 var(--s3)}
+.course .meter{display:flex; align-items:center; gap:var(--s3)}
 .course .meter .gauge{flex:1; min-width:0}
-.course .meter em{font-style:normal; font-size:.72rem; color:var(--muted); white-space:nowrap;
-  font-variant-numeric:tabular-nums slashed-zero}
-/* The expanded panel: what is actually left of this course, each one clickable.
-   Kept to the next ten so a Mon-Wed-Fri course does not unroll thirty rows. */
-.course .cx{grid-column:1 / -1; padding-top:var(--s3); margin-top:2px; border-top:1px solid var(--line)}
+.course .meter em{font-style:normal; font-size:.72rem; color:var(--muted); white-space:nowrap}
+.course .subl{font-size:.75rem; color:var(--muted); margin:var(--s2) 0 0}
 @media (prefers-reduced-motion: no-preference){
-  .course .cx{animation:drop .24s cubic-bezier(.22,.61,.36,1) both}
+  .course .cx{animation:drop .24s var(--ease-out) both}
   @keyframes drop{from{opacity:0; transform:translateY(-4px)} to{opacity:1; transform:none}}
 }
-@media (max-width:520px){
-  .course{grid-template-columns:1fr}
-  .course .pct{grid-column:1; grid-row:auto; text-align:left}
+/* A phone gets two lines per course: who and how much attended, then the
+   three figures with their own labels, since the header row is gone. */
+@media (max-width:719px){
+  .chead{display:none}
+  .crow{grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"who pct" "leave leave" "miss next";
+        padding:var(--s3) var(--s4) var(--s3) 26px; gap:6px var(--s3)}
+  .cwho{grid-area:who} .cpct{grid-area:pct; text-align:right; min-width:96px}
+  .cleave{grid-area:leave} .cmiss{grid-area:miss} .cnext{grid-area:next; text-align:right}
+  .cfig .lab{display:inline; color:var(--muted); font-weight:400}
+  .cfig b{display:inline; font-size:.84rem}
+  .cfig b + span{margin-left:.8ch}
+  .course .cx{padding:var(--s3) var(--s4) var(--s4) 26px}
 }
 
 /* ---------- session list ----------
-   Used in the rail's next-seven-days card and inside an expanded course row.
-   One click cycles attending -> absent -> cancelled, the same gesture the
-   Week grid uses, so there is one way to log a class and not two. */
-.upnext{list-style:none; margin:var(--s3) 0 0; padding:0; display:flex; flex-direction:column; gap:2px}
-.upnext button{
-  width:100%; display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:var(--s3);
-  align-items:baseline; text-align:left; background:none; cursor:pointer; color:var(--ink-2);
-  border:0; border-left:2px solid var(--line-2); border-radius:0 var(--r-sm) var(--r-sm) 0;
-  padding:7px 9px; font:400 .77rem/1.35 var(--mono); font-variant-numeric:tabular-nums slashed-zero;
-  transition:background .15s ease, border-color .15s ease, padding-left .15s ease;
-}
-.upnext button:hover{background:var(--surface-2); padding-left:13px}
-.upnext button b{font-weight:600; color:var(--ink); letter-spacing:-.01em}
-.upnext button span{color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-.upnext button em{font-style:normal; font-weight:600; font-size:.72rem}
-.upnext .attended{border-left-color:var(--ok)}
-.upnext .attended em{color:var(--ok)}
-.upnext .absent{border-left-color:var(--bad); background:var(--bad-soft)}
-.upnext .absent em{color:var(--bad)}
-.upnext .cancelled{border-left-color:var(--line-2); opacity:.55}
-.upnext .cancelled b,.upnext .cancelled span{text-decoration:line-through}
+   Used in the rail, an expanded course, the check-in and course history. Each
+   class is a flat row inside one well, with its state set by three explicit
+   buttons - never a tap that cycles, because a second tap on a cycling row
+   turned an absence into a cancellation and gave the leave back. */
+.upnext{list-style:none; margin:var(--s3) 0 0; padding:6px; display:flex; flex-direction:column; gap:4px;
+  border-radius:var(--r-md); background:var(--bg-2); box-shadow:var(--press-sm)}
+.upnext.scroll{max-height:340px; overflow-y:auto; scrollbar-width:thin}
+.srow{display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:6px var(--s3);
+  padding:6px 6px 6px 10px; border-left:3px solid var(--line-2); border-radius:3px var(--r-sm) var(--r-sm) 3px}
+.srow.attended{border-left-color:var(--ok)}
+.srow.absent{border-left-color:var(--bad); background:var(--bad-soft)}
+.srow.cancelled .sinfo{opacity:.6; text-decoration:line-through}
+.sinfo{display:flex; gap:10px; align-items:baseline; min-width:0; font-size:.78rem; line-height:1.35;
+  font-variant-numeric:tabular-nums slashed-zero}
+.sinfo b{font-weight:600; color:var(--ink); letter-spacing:-.01em; white-space:nowrap}
+.sinfo span{color:var(--muted)}
+.sinfo em{font-style:normal; color:var(--bad); font-weight:600}
+.seg.sm{padding:3px; gap:2px; border-radius:10px; box-shadow:var(--press-sm)}
+.seg.sm button{padding:4px 9px; font-size:.72rem; border-radius:7px}
+.sub-h{font:600 .66rem/1.4 var(--mono); letter-spacing:.05em; text-transform:uppercase; color:var(--muted); margin:var(--s4) 0 0}
+.sub-h:first-child{margin-top:0}
+
+/* ---------- undo bar and class popover ----------
+   Both live outside #view, so a re-render never takes them away mid-read. */
+.undobar{position:fixed; left:50%; bottom:16px; transform:translateX(-50%); z-index:60;
+  display:flex; align-items:center; gap:var(--s3); width:max-content; max-width:calc(100% - 32px);
+  padding:8px 8px 8px 16px; border-radius:var(--r-md); background:var(--surface-2); color:var(--ink);
+  border:1px solid var(--line-2); box-shadow:var(--raise); font-size:.82rem}
+.undobar[hidden]{display:none}
+.pop{position:fixed; z-index:50; width:min(330px, calc(100vw - 16px)); padding:var(--s3) var(--s4) var(--s4);
+  border-radius:var(--r-md); background:var(--surface); border:1px solid var(--line-2); box-shadow:var(--raise-lg)}
+.pop[hidden]{display:none}
+.pop b{display:block; font-weight:600}
+.pop p{font-size:.78rem; color:var(--muted); margin:2px 0 var(--s3)}
+
+/* ---------- start-up question and caveat ---------- */
+.startup{--tone:var(--warn); border:1px solid color-mix(in srgb, var(--warn) 45%, transparent)}
+.startup h2{color:var(--warn)}
+.startup .row{margin-top:var(--s3)}
+.caveat{font-size:.8rem; color:var(--ink-2); margin:0 0 var(--s3); display:flex; flex-wrap:wrap; gap:6px var(--s3); align-items:center}
+.caveat b{color:var(--warn); font-weight:600}
+
+/* ---------- check-in ---------- */
+.ckday{margin-top:var(--s4)}
+.ckday .spread{align-items:center}
+.ckday h4{margin:0; font:600 .8rem/1.3 var(--mono)}
 
 /* ---------- disclosure ----------
-   For a control that is set once a semester and then never touched again. It
-   was the tallest card in the rail: seven number inputs, permanently open,
-   sitting above the figure you actually glance at. */
-.disclose{background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg);
-  margin:0 0 var(--s4); box-shadow:var(--shadow)}
+   For a control that is set once a semester and then never touched again. */
+.disclose{background:var(--surface); border-radius:var(--r-lg); margin:0 0 var(--s5); box-shadow:var(--raise)}
 .disclose > summary{
-  list-style:none; cursor:pointer; padding:var(--s4); display:flex; align-items:center; gap:var(--s2);
-  font:500 .7rem/1.3 var(--mono); letter-spacing:.055em; text-transform:uppercase; color:var(--muted);
-  transition:color .16s ease;
+  list-style:none; cursor:pointer; padding:var(--s4) var(--s5); display:flex; align-items:center; gap:var(--s2);
+  font:500 .7rem/1.3 var(--mono); letter-spacing:.055em; text-transform:uppercase; color:var(--accent-ink);
+  border-radius:var(--r-lg); transition:color .16s ease;
 }
 .disclose > summary::-webkit-details-marker{display:none}
 .disclose > summary:hover{color:var(--ink-2)}
 .disclose > summary::after{content:""; margin-left:auto; width:7px; height:7px;
   border-right:1.5px solid currentColor; border-bottom:1.5px solid currentColor;
-  transform:rotate(45deg) translate(-2px,-2px); transition:transform .2s ease}
+  transform:rotate(45deg) translate(-2px,-2px); transition:transform .2s var(--ease-out)}
 .disclose[open] > summary{color:var(--ink)}
 .disclose[open] > summary::after{transform:rotate(-135deg)}
-.disclose .body{padding:0 var(--s4) var(--s4)}
+.disclose .body{padding:0 var(--s5) var(--s4)}
 
 /* ---------- adaptive page shell ----------
    Phone: one stacked column. Desktop: content and a settings rail, so the
    controls stop pushing the answer below the fold. */
-.split{display:grid; gap:var(--s5); align-items:start}
+.split{display:grid; gap:var(--s6); align-items:start}
 @media (min-width:1080px){ .split{grid-template-columns:minmax(0,1.6fr) minmax(290px,.9fr)} }
-.rail .card{padding:var(--s4)}
-/* Sticky, but never taller than the space it has: at seven courses the rail
-   ran 923px against a 1394px column, so it may scroll inside its own pane
-   rather than stranding the bottom of the page beside dead background. */
+.rail .card{padding:var(--s4) var(--s5)}
+/* Sticky, but never taller than the space it has, so it scrolls inside its own
+   pane rather than stranding the bottom of the page beside dead background.
+   A scrolling pane clips whatever overflows it, shadows included, so the rail
+   carries 20px of padding for its cards' shadows to fall into and a matching
+   negative margin to keep its cards aligned with the column beside it.
+   top: 60 header + 58 tab strip + 24 gap - 14 padding = 128. */
 @media (min-width:1080px){
-  .rail{position:sticky; top:126px; max-height:calc(100vh - 142px); overflow-y:auto;
-        scrollbar-width:thin; padding-right:2px}
+  .rail{position:sticky; top:128px; max-height:calc(100vh - 128px); overflow-y:auto;
+        scrollbar-width:thin; margin:-14px -20px; padding:14px 20px}
 }
 
 /* Staggered entry - never all at once, and only when the view actually
@@ -491,14 +578,17 @@ label.field > *{text-transform:none; letter-spacing:0; font-size:.95rem; font-we
   @keyframes rise{from{opacity:0; transform:translateY(7px)} to{opacity:1; transform:none}}
 }
 
-/* ---------- week grid ---------- */
-.gridwrap{overflow-x:auto; border:1px solid var(--line); border-radius:var(--r-lg); background:var(--surface)}
+/* ---------- week grid ----------
+   The grid is one raised sheet and the hour lines inside it stay hairlines: a
+   timetable is read along its rules, and grooves would turn it into a waffle.
+   A class is a small raised chip tinted by its state, and sinks when clicked. */
+.gridwrap{overflow-x:auto; border-radius:var(--r-lg); background:var(--surface); box-shadow:var(--raise)}
 .gridhead{display:grid; grid-template-columns:56px repeat(6,minmax(116px,1fr));
   border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--surface); z-index:2}
-.gridhead div{padding:9px 6px; font:600 .76rem/1.3 var(--mono); text-align:center; color:var(--muted);
+.gridhead div{padding:10px 6px; font:600 .76rem/1.3 var(--mono); text-align:center; color:var(--muted);
   letter-spacing:.02em; text-transform:uppercase}
 .gridhead div span{display:block; font:400 .8rem/1.3 var(--mono); letter-spacing:0; text-transform:none}
-.gridhead div.today{color:var(--accent)}
+.gridhead div.today{color:var(--accent-ink)}
 .gridbody{display:grid; grid-template-columns:56px repeat(6,minmax(116px,1fr)); position:relative}
 .timecol{position:relative; border-right:1px solid var(--line)}
 .timecol span{position:absolute; right:7px; transform:translateY(-50%); font:400 .68rem/1 var(--mono); color:var(--muted)}
@@ -506,65 +596,130 @@ label.field > *{text-transform:none; letter-spacing:0; font-size:.95rem; font-we
 .daycol:last-child{border-right:0}
 .hourline{position:absolute; left:0; right:0; border-top:1px solid var(--line); opacity:.55}
 .blk{
-  position:absolute; left:3px; right:3px; border-radius:var(--r-sm); padding:5px 7px; overflow:hidden;
-  border:1px solid; border-left-width:3px; font:400 .76rem/1.3 var(--mono); cursor:pointer; text-align:left;
-  transition:filter .15s ease, transform .12s ease;
+  --tone:var(--line-2);
+  position:absolute; left:4px; right:4px; border-radius:var(--r-sm); padding:5px 7px 5px 8px; overflow:hidden;
+  border:1px solid color-mix(in srgb, var(--tone) 45%, transparent); border-left:3px solid var(--tone);
+  background:color-mix(in srgb, var(--tone) 17%, var(--bg)); color:var(--ink); box-shadow:var(--raise-xs);
+  font:400 .76rem/1.3 var(--mono); cursor:pointer; text-align:left;
+  transition:box-shadow .16s var(--ease-out), transform .12s var(--ease-out);
 }
-.blk:hover{filter:brightness(1.12)} .blk:active{transform:scale(.985)}
+@media (hover:hover) and (pointer:fine){ .blk:hover:not(:disabled){box-shadow:var(--raise-sm)} }
+.blk:active:not(:disabled){transform:scale(.985); box-shadow:var(--press-sm)}
 .blk b{display:block; font:600 .82rem/1.25 var(--mono); letter-spacing:-.01em}
 .blk .tag{display:block; font:600 .6rem/1.4 var(--mono); letter-spacing:.04em; text-transform:uppercase; opacity:.85}
-.blk.attended{background:var(--ok-soft); border-color:var(--ok); color:var(--ink)}
-.blk.absent{background:var(--bad-soft); border-color:var(--bad); color:var(--ink)}
-.blk.cancelled{background:var(--bg-2); border-color:var(--line-2); color:var(--muted); text-decoration:line-through}
-.blk.extra{border-style:dashed; border-width:2px}
-.blk.uncounted{background:var(--bg-2); border-color:var(--line-2); color:var(--muted); opacity:.6; cursor:default}
-.blk.uncounted:hover{filter:none}
+.blk.attended{--tone:var(--ok)}
+.blk.absent{--tone:var(--bad)}
+.blk.cancelled{color:var(--muted); text-decoration:line-through}
+.blk.extra{border-style:dashed; border-width:2px 2px 2px 3px}
+.blk.uncounted{color:var(--muted); opacity:.6; cursor:default; box-shadow:none}
 .blk.uncounted .tag{font-style:italic}
 .daycol.offday{background:repeating-linear-gradient(45deg,transparent,transparent 7px,var(--bg-2) 7px,var(--bg-2) 14px)}
 
-/* ---------- calendar editor ---------- */
-.months{display:grid; grid-template-columns:repeat(auto-fit,minmax(244px,1fr)); gap:var(--s4)}
-.month h3{font:600 .84rem/1.2 var(--mono); text-align:center; margin-bottom:var(--s2);
+/* ---------- calendar editor ----------
+   A teaching day stands up and a day with no classes is pressed flat into the
+   page - the calendar reads as which days are there and which are gone before
+   any colour is involved. */
+.months{display:grid; grid-template-columns:repeat(auto-fit,minmax(244px,1fr)); gap:var(--s5)}
+.month.card{padding:var(--s4)}
+.month h3{font:600 .84rem/1.2 var(--mono); text-align:center; margin-bottom:var(--s3);
   letter-spacing:.04em; color:var(--ink-2)}
-.mgrid{display:grid; grid-template-columns:repeat(7,1fr); gap:3px}
+.mgrid{display:grid; grid-template-columns:repeat(7,1fr); gap:5px}
 .mgrid .dow{font:600 .62rem/1.6 var(--mono); text-align:center; color:var(--muted); letter-spacing:0}
 .mgrid button{
-  aspect-ratio:1; border:1px solid var(--line); border-radius:var(--r-sm); background:var(--bg-2);
+  aspect-ratio:1; border:0; border-radius:9px; background:var(--surface); box-shadow:var(--raise-xs);
   font:400 .76rem/1 var(--mono); cursor:pointer; padding:0; display:flex; flex-direction:column;
-  align-items:center; justify-content:center; gap:1px; transition:border-color .15s ease, background .15s ease;
+  align-items:center; justify-content:center; gap:1px;
+  transition:box-shadow .15s var(--ease-out), color .15s ease;
 }
-.mgrid button:hover:not(:disabled){border-color:var(--accent)}
-.mgrid button.blank{border:0; background:none; cursor:default}
-.mgrid button.outside{opacity:.28; cursor:default}
-.mgrid button.off{background:var(--bad-soft); border-color:var(--bad); text-decoration:line-through; color:var(--bad)}
-.mgrid button.swap{background:var(--warn-soft); border-color:var(--warn); color:var(--warn)}
-.mgrid button.sun{opacity:.38; cursor:default}
+.mgrid button:hover:not(:disabled){color:var(--accent-ink)}
+.mgrid button:active:not(:disabled){box-shadow:var(--press-sm)}
+.mgrid button.blank{background:none; box-shadow:none; cursor:default}
+.mgrid button.outside{opacity:.28; cursor:default; box-shadow:none}
+.mgrid button.off{background:var(--bad-soft); box-shadow:var(--press-sm); text-decoration:line-through; color:var(--bad)}
+.mgrid button.swap{background:var(--warn-soft); box-shadow:var(--press-sm); color:var(--warn)}
+.mgrid button.sun{opacity:.38; cursor:default; box-shadow:none}
 .mgrid button small{font:600 .55rem/1 var(--mono); letter-spacing:.04em}
-pre.out{background:var(--bg-2); border:1px solid var(--line); border-radius:var(--r-md); padding:var(--s3);
+pre.out{background:var(--bg-2); border-radius:var(--r-md); padding:var(--s3) var(--s4); box-shadow:var(--press);
   overflow:auto; font-size:.76rem; line-height:1.6; max-height:340px; white-space:pre; color:var(--ink-2)}
+
+/* ---------- leave planner ----------
+   A teaching day stands up because you act on it; a day you have planned off
+   sinks, because it now holds a value - the same raised/pressed rule as the
+   rest of the page. Its verdict is a coloured bar along its foot, never a
+   fill, so the three status colours keep meaning what they mean everywhere. */
+.lgrid{display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:6px}
+.lgrid .dow{font:600 .62rem/1.6 var(--mono); text-align:center; color:var(--muted)}
+.lday{position:relative; min-height:58px; border:0; border-radius:10px; padding:6px 4px 9px; text-align:center;
+  display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:2px;
+  background:var(--surface); color:var(--ink); font:500 .8rem/1.1 var(--mono); font-variant-numeric:tabular-nums}
+.lday small{font:400 .6rem/1.25 var(--mono); color:var(--muted)}
+button.lday{cursor:pointer; box-shadow:var(--raise-xs); transition:box-shadow .15s var(--ease-out), transform .12s var(--ease-out)}
+button.lday:hover{box-shadow:var(--raise-sm)}
+button.lday:active{transform:scale(.97)}
+button.lday::after{content:""; position:absolute; left:8px; right:8px; bottom:4px; height:3px; border-radius:2px; background:var(--line-2)}
+button.lday.ok::after{background:var(--ok)} button.lday.tight::after{background:var(--warn)} button.lday.no::after{background:var(--bad)}
+button.lday.planned{box-shadow:var(--press-sm); outline:2px solid var(--accent-ink); outline-offset:-2px}
+button.lday.planned::after{background:var(--accent)}
+button.lday.focus{color:var(--accent-ink)}
+.lday.off,.lday.sun,.lday.free{background:none; color:var(--muted)}
+.lday.off small{color:var(--ok)} .lday.free small{color:var(--ok)}
+.lday.today .n{text-decoration:underline; text-underline-offset:3px; text-decoration-thickness:2px; text-decoration-color:var(--accent-ink)}
+.lday.blank{background:none; visibility:hidden}
+.lday.done{background:none; color:var(--muted); opacity:.55}
+.lkey{display:flex; flex-wrap:wrap; gap:6px var(--s4); font-size:.72rem; color:var(--muted); margin:var(--s3) 0 0}
+.lkey i{display:inline-block; width:12px; height:3px; border-radius:2px; vertical-align:middle; margin-right:5px; background:var(--line-2)}
+.lkey .k-ok i{background:var(--ok)} .lkey .k-tight i{background:var(--warn)} .lkey .k-no i{background:var(--bad)} .lkey .k-pl i{background:var(--accent)}
+.lfocus{margin-top:var(--s4); font-size:.8rem; line-height:1.55; color:var(--ink-2)}
+.lfocus b{color:var(--ink)}
+.lc{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px var(--s3); align-items:baseline;
+  padding:var(--s2) 0; border-bottom:1px solid var(--line); font-size:.8rem; font-variant-numeric:tabular-nums slashed-zero}
+.lc:last-of-type{border-bottom:0}
+.lc b{font-weight:600}
+.lc .to{text-align:right; color:var(--ink-2)}
+.lc .to.bad{color:var(--bad); font-weight:600} .lc .to.warn{color:var(--warn); font-weight:600}
+.lbar{grid-column:1 / -1; height:6px; border-radius:99px; background:var(--bg-2); box-shadow:var(--press-sm); position:relative; overflow:hidden}
+.lbar i{position:absolute; inset:0 auto 0 0; background:var(--ok); border-radius:99px}
+.lbar s{position:absolute; top:0; bottom:0; text-decoration:none;
+  background:repeating-linear-gradient(135deg, var(--accent) 0 3px, transparent 3px 6px); opacity:.8}
+.brk{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px var(--s3); align-items:center;
+  padding:var(--s3) 0; border-bottom:1px solid var(--line)}
+.brk:last-child{border-bottom:0}
+.brk b{font-weight:600} .brk p{margin:0; font-size:.76rem; color:var(--muted); max-width:none}
+.months.lmonths{grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
+
+/* ---------- hairline figures ----------
+   The kernel styles a figure from its own --hl-* variables; these hand it the
+   active palette's ground, ink and accent, so all four palettes reach it and
+   the figure itself sets no colour. */
+.figure{width:min(100%, 300px); margin:0 auto var(--s3)}
+/* The kernel's own override hooks. Its default dark edge (#5b5d64 on #08090a)
+   is a dim grey: muted for the silhouette and line-2 for the mid stroke keep
+   that same step on every palette here. */
+[data-hairline]{--hairline-plate:var(--surface); --hairline-hi:var(--accent-ink); --hairline-edge:var(--muted);
+  --hairline-mid:var(--line-2); --hairline-lo:var(--line)}
 
 /* ---------- tables ---------- */
 table{border-collapse:collapse; width:100%; font-size:.86rem}
 th,td{text-align:left; padding:8px 10px; border-bottom:1px solid var(--line)}
 tbody tr:last-child td{border-bottom:0}
 th{font:600 .66rem/1.4 var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:.045em}
-td.num,th.num{text-align:right; font-variant-numeric:tabular-nums; font-family:var(--mono); font-size:.82rem}
-th.num{font-family:var(--mono)}
-.tablewrap{overflow-x:auto; margin-inline:calc(var(--s4) * -1); padding-inline:var(--s4)}
+td.num,th.num{text-align:right; font-variant-numeric:tabular-nums; font-size:.82rem}
+.tablewrap{overflow-x:auto; margin-inline:calc(var(--s4) * -1); padding:4px var(--s4)}
 
 /* ---------- states ---------- */
 .empty{text-align:center; padding:var(--s7) var(--s4); max-width:56ch; margin-inline:auto}
-.empty h2{color:var(--ink); text-transform:none; letter-spacing:-.015em;
+.empty h2{color:var(--ink); text-transform:none;
   font:700 clamp(1.3rem,4vw,1.7rem)/1.2 var(--mono); letter-spacing:-.03em; margin-bottom:var(--s3)}
-.steps{text-align:left; margin:var(--s5) auto 0; padding-left:1.3em; color:var(--ink-2)}
-.steps li{margin-bottom:var(--s3); padding-left:.2em}
-.steps li::marker{color:var(--muted); font-family:var(--mono); font-size:.85em}
-.msg{border-radius:var(--r-sm); padding:9px 13px; font-size:.85rem; margin:var(--s3) 0;
-  border:1px solid; border-left-width:3px; max-width:60ch}
-.msg.err{background:var(--bad-soft); border-color:var(--bad)}
-.msg.ok{background:var(--ok-soft); border-color:var(--ok)}
+.empty p{margin-inline:auto}
+.steps{text-align:left; margin:var(--s5) auto var(--s5); padding:var(--s4) var(--s5) var(--s4) 2.6em;
+  color:var(--ink-2); border-radius:var(--r-md); box-shadow:var(--press-sm)}
+.steps li{margin-bottom:var(--s2); padding-left:.2em}
+.steps li:last-child{margin-bottom:0}
+.steps li::marker{color:var(--muted); font-size:.85em}
+.msg{padding:9px 13px 9px 20px; font-size:.85rem; margin:var(--s3) 0; max-width:60ch; --tone:var(--ok)}
+.msg.err{--tone:var(--bad)}
 
-@media print{ nav.tabs, header.top .btn, .hero-actions{display:none} }
+@media print{ nav.tabs, header.top .swatches, .hero-actions{display:none} }
 </style>
 </head>
 <body>
@@ -576,8 +731,10 @@ th.num{font-family:var(--mono)}
       <small class="sw-name" id="palname"></small></div>
   </div>
 </header>
-<nav class="tabs" aria-label="Sections"><div class="wrap" id="tabbar" role="tablist"></div></nav>
+<nav class="tabs" aria-label="Sections"><div class="wrap"><div class="tabtrack" id="tabbar" role="tablist"></div></div></nav>
 <main id="main"><div class="wrap"><div id="banners" role="status" aria-live="polite"></div><div id="view"></div></div></main>
+<div class="pop" id="pop" role="dialog" aria-label="Mark this class" hidden></div>
+<div class="undobar" id="undobar" role="status" aria-live="polite" hidden></div>
 <footer class="bot"><div class="wrap" id="foot"></div></footer>
 <script>
 /* ==========================================================================
@@ -588,7 +745,10 @@ th.num{font-family:var(--mono)}
    · Import   — a bob-attendance payload, applied as a diff, never a replace
    · Sessions — CALENDAR x meetings, expanded into dated, hour-priced sessions
    · Numbers  — held / attended / budget, every rounding against the student
-   · Views    — Courses, Week, Reconcile, Calendar, Data
+   · Marks    — set explicitly, never cycled; a 20-deep undo stack
+   · Check-in — reviewedThrough: what has been checked, and what is on trust
+   · Planner  — whole days off priced through stats() as a what-if
+   · Views    — Overview, Log, Leave, Week, Settings
    Public namespace: window.Atten
    ========================================================================== */
 (function(){
@@ -596,10 +756,12 @@ th.num{font-family:var(--mono)}
 
 // --- Constants -------------------------------------------------------------
 
-const SCHEMA_VERSION = 3;   // 2 adds countFrom; 3 renames theme to a palette id
+const SCHEMA_VERSION = 6;   // 2 adds countFrom; 3 made theme a palette id; 4 and 5 retire some of them; 6 adds reviewedThrough and leavePlan
 const STORE_KEY   = 'atten.v1';        // the whole profile, one key
 const UNDO_KEY     = 'atten.undo';     // pre-import snapshot, one deep
 const ARCHIVE_PRE  = 'atten.archive.'; // a displaced semester, never mixed in
+const RESCUE_PRE   = STORE_KEY + '.unreadable-'; // a profile that would not parse, kept verbatim
+const UNDO_DEPTH   = 20;               // marks you can step back through; memory only, gone on reload
 
 // 75% is Ashoka's usual bar. It is per-course editable because a course can
 // set its own, and the app must never argue with a syllabus.
@@ -610,13 +772,16 @@ const DEFAULT_THRESHOLD = 0.75;
 // safe, close and under the bar here. Order is the order they appear in the
 // header, darkest first.
 const PALETTES = [
-  ['monolith',  'Monolith',  'dark'],
-  ['mariana',   'Mariana',   'dark'],
+  ['selene',    'Selene',    'dark'],
+  ['wraith',    'Wraith',    'dark'],
   ['porcelain', 'Porcelain', 'light'],
   ['ink',       'Ink',       'light']
 ];
 const PALETTE_IDS = PALETTES.map(p => p[0]);
-const DEFAULT_PALETTE = 'monolith';
+const DEFAULT_PALETTE = 'selene';
+// Every id this app has ever stored, pointing at what replaced it. A palette
+// that is retired must not silently reset someone to the default.
+const PALETTE_WAS = { dark:'selene', monolith:'selene', mariana:'wraith', cryotube:'wraith', light:'porcelain' };
 
 const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat'];   // Sunday never teaches
 const PX_PER_MIN = 1.25;              // Bob's scale, so the grids look alike
@@ -699,7 +864,14 @@ function blank(){
            courses: [], log: {}, extras: [], thresholds: {}, official: {}, theme: null, week: null,
            // null means "the whole term". A date here is the day you started
            // keeping records, and nothing before it counts toward anything.
-           countFrom: null };
+           countFrom: null,
+           // The last day whose held classes you have checked. null means none
+           // ever were: every past class is counted as attended on trust, and
+           // the page says so until you answer the start-up question.
+           reviewedThrough: null,
+           // Whole days off you are considering. A what-if only - nothing here
+           // touches a figure until you commit it as missed classes.
+           leavePlan: [] };
 }
 function migrate(o){
   if(!o || typeof o !== 'object') return blank();
@@ -708,22 +880,36 @@ function migrate(o){
   // reported, never silently downgraded by filling in fields it may not mean.
   if(typeof o.v === 'number' && o.v > SCHEMA_VERSION) o.__future = true;
   Object.keys(b).forEach(k => { if(o[k] === undefined) o[k] = b[k]; });
-  // v3: theme held 'dark' or 'light'. Those two are now the ids of the palettes
-  // that replaced them, so the setting survives rather than resetting a
-  // returning visitor to the default. Anything unrecognised becomes null, which
-  // means "follow the system" - the same as never having chosen.
-  if(o.theme === 'dark')  o.theme = 'monolith';
-  if(o.theme === 'light') o.theme = 'porcelain';
-  if(o.theme != null && PALETTE_IDS.indexOf(o.theme) < 0) o.theme = null;
+  // v3 made theme a palette id; v4 retired monolith and mariana for selene and
+  // cryotube; v5 retired cryotube for wraith. PALETTE_WAS maps every id this
+  // app has ever written straight onto what currently
+  // replaced it, so the setting survives a retirement rather than resetting a
+  // returning visitor. Anything still unrecognised becomes null, which means
+  // "follow the system" - the same as never having chosen.
+  if(o.theme != null && PALETTE_IDS.indexOf(o.theme) < 0) o.theme = PALETTE_WAS[o.theme] || null;
   o.v = SCHEMA_VERSION;
   return o;
 }
 let S = blank();
 function load(){
-  try{ S = migrate(JSON.parse(localStorage.getItem(STORE_KEY))); }
-  catch(e){ S = blank(); S.__corrupt = true; }
+  let raw = null;
+  try{ raw = localStorage.getItem(STORE_KEY); S = migrate(JSON.parse(raw)); }
+  catch(e){
+    // Copied aside before anything can save. The banner used to promise the
+    // unreadable copy was "not overwritten" while the next palette click did
+    // exactly that, and no other copy existed anywhere.
+    S = blank(); S.__corrupt = true; S.__rescued = null;
+    try{ const k = RESCUE_PRE + Date.now(); localStorage.setItem(k, raw); S.__rescued = k; }catch(e2){}
+  }
+  // A planned day that has passed is dropped, never turned into an absence.
+  const t = today(), was = S.leavePlan.length;
+  S.leavePlan = S.leavePlan.filter(d => d >= t);
+  S.__planDropped = was - S.leavePlan.length;
 }
-function save(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(S)); }catch(e){ toast('Could not save - storage is full or blocked.','err'); } }
+// Keys starting __ describe this session (a corrupt read, a dropped plan) and
+// are never written: saved, __corrupt would raise its banner forever.
+function save(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(S, (k,v) => k.slice(0,2) === '__' ? undefined : v)); }
+  catch(e){ toast('Could not save - storage is full or blocked.','err'); } }
 
 // --- Sessions --------------------------------------------------------------
 //
@@ -808,14 +994,60 @@ function whenLabel(s){
 }
 
 const markOf = s => S.log[s.id] || 'attended';
-function setMark(id, mark){
-  if(mark === 'attended') delete S.log[id]; else S.log[id] = mark;
-  save();
+// What a mark is called on screen. Storage keeps 'absent'; people say missed.
+const MARK_WORD = { attended:'attended', absent:'missed', cancelled:'cancelled' };
+
+// Every mark is set, never cycled. A click used to step attended -> absent ->
+// cancelled, so a second tap on an absence cancelled the class: the absence
+// vanished, the class left the denominator, and ECO373's leave grew 12.375h ->
+// 13.125h. Pressing the state a class is already in now does nothing.
+//
+// Each change goes on an undo stack with the fields it moved, so one button
+// can step back through marks, a check-in, a committed plan or the start-up
+// answer alike. Memory only: it does not survive a reload, and nothing on the
+// page says it does.
+const UNDO = [];
+function remember(label, logBefore, fields){
+  UNDO.push({ label, log: logBefore, fields: fields || null });
+  if(UNDO.length > UNDO_DEPTH) UNDO.shift();
+  undoBar(label);
 }
-function cycle(id){
-  const cur = S.log[id] || 'attended';
-  setMark(id, cur === 'attended' ? 'absent' : cur === 'absent' ? 'cancelled' : 'attended');
+// Writes marks without saving or remembering; returns {id: previous} for those that moved.
+function writeMarks(ids, mark){
+  const before = {};
+  ids.forEach(id => {
+    const cur = S.log[id] || 'attended';
+    if(cur === mark) return;
+    before[id] = cur;
+    if(mark === 'attended') delete S.log[id]; else S.log[id] = mark;
+  });
+  return before;
 }
+function setMark(id, mark, label){
+  const before = writeMarks([id], mark);
+  if(!Object.keys(before).length) return false;
+  save(); remember(label || 'Marked ' + MARK_WORD[mark], before);
+  return true;
+}
+function undo(){
+  const u = UNDO.pop(); if(!u) return;
+  Object.keys(u.log).forEach(id => { const m = u.log[id]; if(m === 'attended') delete S.log[id]; else S.log[id] = m; });
+  if(u.fields) Object.assign(S, u.fields);
+  save(); render();
+  undoBar(null, 'Undone: ' + u.label.charAt(0).toLowerCase() + u.label.slice(1) + '.');
+}
+// One bar at the foot of the screen, outside #view so a re-render never eats it.
+let undoTimer = null;
+function undoBar(label, done){
+  const el = $('#undobar'); if(!el) return;
+  clearTimeout(undoTimer);
+  if(label == null && UNDO.length) label = UNDO[UNDO.length-1].label;
+  el.innerHTML = done ? '<span>' + esc(done) + '</span>' + (UNDO.length ? '<button class="btn small" id="undo-mark">Undo again</button>' : '')
+                      : '<span>' + esc(label) + '.</span><button class="btn small" id="undo-mark">Undo</button>';
+  el.hidden = false;
+  undoTimer = setTimeout(() => { el.hidden = true; }, 9000);
+}
+function sessionName(s){ return s.code + ' ' + prettyDate(s.date) + ' ' + hhmm(s.start); }
 const thresholdOf = code => (S.thresholds && S.thresholds[code] != null) ? S.thresholds[code] : DEFAULT_THRESHOLD;
 
 // --- The numbers -----------------------------------------------------------
@@ -829,26 +1061,31 @@ const thresholdOf = code => (S.thresholds && S.thresholds[code] != null) ? S.thr
 // still to come. 9.75h of budget on 1.0h classes is nine classes, not ten:
 // missing ten leaves 29.0h of 39.0h, which is 74.4% and a fail.
 
-function stats(code){
+// `hypo`, when given, is a Set of session ids to price as missed - the leave
+// planner's what-if. It never touches S.log, and a cancelled class stays
+// cancelled whatever the plan says.
+function stats(code, hypo){
   const thr = thresholdOf(code);
-  let held = 0, absent = 0, total = 0, future = 0, maxH = 0, nHeld = 0;
+  let held = 0, absent = 0, total = 0, future = 0, maxH = 0, nHeld = 0, nAbsent = 0;
   const todayK = today();
   sessions().forEach(s => {
     if(s.code !== code) return;
     if(!s.counted) return;
-    if(markOf(s) === 'cancelled') return;
+    let mark = markOf(s);
+    if(mark === 'cancelled') return;
+    if(hypo && hypo.has(s.id)) mark = 'absent';
     total += s.hours;
-    if(s.date < todayK){ held += s.hours; nHeld++; if(markOf(s) === 'absent') absent += s.hours; }
+    if(s.date < todayK){ held += s.hours; nHeld++; if(mark === 'absent'){ absent += s.hours; nAbsent++; } }
     // A future class you have already decided to miss is not slack you still
     // hold. It stays in the semester total - it is still scheduled - but it
     // stops counting toward what you will have attended, so the budget drops
     // the moment you mark it rather than on the day it passes.
-    else { if(markOf(s) !== 'absent') future += s.hours; if(s.hours > maxH) maxH = s.hours; }
+    else { if(mark !== 'absent') future += s.hours; if(s.hours > maxH) maxH = s.hours; }
   });
   const attended = held - absent;
   const budget = attended + future - thr*total;
   const step = maxH || 1;
-  const st = { code, thr, held, absent, attended, total, future, nHeld,
+  const st = { code, thr, held, absent, attended, total, future, nHeld, nAbsent, budget,
                pct: nHeld ? attended/held : null,
                budgetHours: Math.max(0, budget),
                budgetSessions: Math.max(0, Math.floor(Math.max(0,budget)/step)),
@@ -870,8 +1107,8 @@ function stateLine(st){
     if(!st.reachable) l += ' Attending every one of them still leaves you under the bar - this course cannot be recovered by attendance alone.';
     return l;
   }
-  if(st.state === 'close') return hDown(st.budgetHours) + 'h left. One more absence puts you under ' + Math.round(st.thr*100) + '%.';
-  return hDown(st.budgetHours) + 'h of leave left (' + st.budgetSessions + ' ' + (st.budgetSessions===1?'class':'classes') + ' of ' + h1(st.step) + 'h).';
+  if(st.state === 'close') return 'Less than one class of leave left (' + hDown(st.budgetHours) + 'h). One more absence puts you under ' + Math.round(st.thr*100) + '%.';
+  return st.budgetSessions + ' ' + (st.budgetSessions===1?'class':'classes') + ' of leave left, counting each as ' + h1(st.step) + 'h, the longest still to come (' + hDown(st.budgetHours) + 'h in all).';
 }
 
 // --- Palette ---------------------------------------------------------------
@@ -910,7 +1147,11 @@ function toast(msg, kind){
 
 function banners(){
   const out = [];
-  if(S.__corrupt) out.push(['bad','Your saved profile could not be read','It was not overwritten. Restore a backup from the Data tab before logging anything, or the unreadable copy will be replaced the next time you click.']);
+  if(S.__corrupt) out.push(['bad','Your saved profile could not be read',
+    S.__rescued ? 'A verbatim copy was set aside as ' + S.__rescued + ' before anything else ran, and you can download it from Settings. Restore a backup there before logging anything.'
+                : 'This browser would not let a copy be set aside, so the unreadable profile will be replaced the next time anything saves. Restore a backup from Settings before you click anything else.']);
+  if(S.__planDropped) out.push(['warn', S.__planDropped + ' planned day' + (S.__planDropped===1?' has':'s have') + ' passed',
+    'They were dropped from your leave plan. Nothing was marked missed - if you did take them, log them on the Log tab.']);
   if(S.__future) out.push(['bad','This profile was written by a newer version of the app','Some of what it holds may not be shown. Update the app rather than logging on top of it.']);
   if(CALENDAR.provisional) out.push(['warn','The semester calendar is provisional','Its dates were not taken from Ashoka\'s published academic calendar - nothing on this machine holds one. Term start '+prettyDate(CALENDAR.start)+', end '+prettyDate(CALENDAR.end)+', half-semester boundary '+prettyDate(CALENDAR.halfBoundary)+', 0 holidays. Until you author the real one in the Calendar tab, every budget below is arithmetic on dates that are a guess.']);
   if(today() > CALENDAR.end) out.push(['warn','The calendar has run out','It was authored on '+CALENDAR.authored+' for '+CALENDAR.label+', which ended '+prettyDate(CALENDAR.end)+'. No sessions exist past that date, so every budget is frozen at the term end.']);
@@ -919,24 +1160,44 @@ function banners(){
     out.push(['warn','You are counting from ' + prettyDate(S.countFrom) + ', not from the start of term',
       x.n + ' session' + (x.n===1?'':'s') + ' worth ' + h1(x.hours) + 'h, between ' + prettyDate(CALENDAR.start)
       + ' and the day before, are excluded from every figure on this page. Your official record still counts them, '
-      + 'so the percentage here will read higher than the registrar\'s. Use Reconcile before you trust either one.'
+      + 'so the percentage here will read higher than the registrar\'s. Use Log › Reconcile before you trust either one.'
       + (x.logged ? ' ' + x.logged + ' of them have something logged against them, kept but not counted.' : '')]);
   }
   if(S.semester && S.semester !== CALENDAR.semester) out.push(['bad','Your timetable is from a different semester','It says '+esc(S.semester)+'; this build\'s calendar is '+CALENDAR.semester+'. Nothing has been mixed - import a current plan from the Data tab, and the old profile is archived first.']);
   $('#banners').innerHTML = out.map(b => '<div class="banner '+b[0]+'"><b>'+esc(b[1])+'</b>'+esc(b[2])+'</div>').join('');
 }
 
-const VIEWS = [['courses','Courses'],['week','Week'],['reconcile','Reconcile'],['calendar','Calendar'],['data','Data']];
-let view = 'courses';
+// Overview answers "can I skip the next one", Log corrects the past, Leave
+// plans the future, Week is the timetable. Settings holds the two things
+// touched once a term - the data and the calendar constant.
+const VIEWS = [['overview','Overview'],['log','Log'],['leave','Leave'],['week','Week'],['settings','Settings']];
+const NEEDS_COURSES = {overview:1, log:1, leave:1, week:1};
+let view = 'overview';
 let lastView = null;      // entry animation runs on a view change, not on every render
 let openCourse = null;    // the expanded course row, kept across a re-render
 let refocus = null;       // #view is replaced wholesale, so keyboard focus is put back by hand
 
+// Replacing #view removes a focused input, the input blurs, its change event
+// fires, and that handler renders again - inside the first render's innerHTML
+// assignment, which then throws. So a render asked for during a render is
+// deferred until the first one has finished, and run once.
+let rendering = false, renderAgain = false;
 function render(){
+  if(rendering){ renderAgain = true; return; }
+  rendering = true;
+  try{ renderNow(); } finally { rendering = false; }
+  if(renderAgain){ renderAgain = false; render(); }
+}
+function renderNow(){
   invalidate();
+  unmountFigures();
+  closePop();
   banners();
   $('#tabbar').innerHTML = VIEWS.map(v =>
-    '<button data-tab="'+v[0]+'"'+(v[0]===view?' aria-current="page"':'')+'>'+v[1]+'</button>').join('');
+    '<button data-tab="'+v[0]+'"'+(v[0]===view?' aria-current="page"':'')+'>'+v[1]
+    + (v[0]==='log' && S.courses.length && uncheckedCount() ? ' <span class="tabn">' + uncheckedCount() + '</span>' : '')
+    + (v[0]==='leave' && S.leavePlan.length ? ' <span class="tabn">' + S.leavePlan.length + '</span>' : '')
+    + '</button>').join('');
   const sub = S.courses.length
     ? S.courses.length + ' courses · ' + esc(S.planName || CALENDAR.label)
     : 'no timetable loaded';
@@ -948,11 +1209,11 @@ function render(){
   const cur = $('#tabbar button[aria-current="page"]');
   if(cur && cur.scrollIntoView) cur.scrollIntoView({block:'nearest', inline:'nearest'});
   $('#view').innerHTML =
-    (!S.courses.length && view !== 'calendar' && view !== 'data') ? emptyView() :
-    view === 'courses'   ? coursesView() :
-    view === 'week'      ? weekView() :
-    view === 'reconcile' ? reconcileView() :
-    view === 'calendar'  ? calendarView() : dataView();
+    (!S.courses.length && NEEDS_COURSES[view]) ? emptyView() :
+    view === 'overview' ? overviewView() :
+    view === 'log'      ? logView() :
+    view === 'leave'    ? leaveView() :
+    view === 'week'     ? weekView() : settingsView();
   // Only a view change flies the page in. Nudging a threshold re-renders too,
   // and replaying the stagger there reads as the page reloading under you.
   const el = $('#view');
@@ -960,6 +1221,9 @@ function render(){
   lastView = view;
   const bd = $('#bar-details');
   if(bd) bd.addEventListener('toggle', () => { barOpen = bd.open; });
+  const cd = $('#cal-details');
+  if(cd) cd.addEventListener('toggle', () => { calOpen = cd.open; });
+  mountFigures();
   if(refocus){
     const back = el.querySelector('button.code[data-course="' + (window.CSS && CSS.escape ? CSS.escape(refocus) : refocus) + '"]');
     if(back) back.focus({preventScroll:true});
@@ -971,15 +1235,94 @@ function render(){
 }
 
 function emptyView(){
-  return '<div class="empty"><h2>No timetable yet</h2>'
+  return '<div class="empty">' + figureSlot('seats')
+    + '<h2>No timetable yet</h2>'
     + '<p class="muted">This app never asks you to type your schedule. It reads the plan you already built.</p>'
     + '<ol class="steps"><li>Open <b>Bob the Builder</b>, pick the plan you are actually enrolled in.</li>'
     + '<li>Click <b>Export for attendance</b>. You get a <code>…-attendance-….json</code> file.</li>'
-    + '<li>Come back to the <b>Data</b> tab here and load that file.</li></ol>'
-    + '<p><button class="btn primary" data-go="data">Go to Data</button></p></div>';
+    + '<li>Come back to <b>Settings</b> here and load that file.</li></ol>'
+    + '<p><button class="btn primary" data-go="settings">Go to Settings</button></p></div>';
 }
 
-// --- Courses view ----------------------------------------------------------
+// --- Shared pieces: when a class is over, marks, session rows -------------
+
+function nowMin(){ const n = new Date(); return n.getHours()*60 + n.getMinutes(); }
+// Over means it has happened: an earlier day, or today and already ended.
+// Stats still price today's classes as future until midnight - this is about
+// what you can log and what you can still plan, not about the arithmetic.
+function isOver(s){ const t = today(); return s.date < t || (s.date === t && s.end <= nowMin()); }
+
+// Classes that have happened since the last check-in. Cancelled ones are
+// listed too, so a wrong cancellation can be caught, but never counted below.
+function uncheckedSessions(){
+  const rt = S.reviewedThrough;
+  return sessions().filter(s => s.counted && isOver(s) && (!rt || s.date > rt));
+}
+function uncheckedCount(){ return uncheckedSessions().filter(s => markOf(s) !== 'cancelled').length; }
+function lastDay(){ return addDays(today(), -1); }
+
+// Three explicit statements, one already true. For a class still to come they
+// read as intentions - going, skipping - and no option is filled or loud: a
+// call-to-action reading "skip" is an app nudging you to skip a class.
+function markSeg(s, small){
+  const m = markOf(s), ahead = !isOver(s);
+  const opts = [['attended', ahead ? 'Going' : 'Attended', 'on-att'], ['absent', ahead ? 'Skipping' : 'Missed', 'on-abs'],
+                ['cancelled', 'Cancelled', 'on-can']];
+  return '<div class="seg' + (small ? ' sm' : '') + '" role="radiogroup" aria-label="' + esc(sessionName(s)) + '">'
+    + opts.map(o => '<button class="' + o[2] + '" role="radio" data-mark="' + esc(s.id) + '" data-to="' + o[0] + '"'
+      + ' aria-checked="' + (m === o[0]) + '" tabindex="' + (m === o[0] ? '0' : '-1') + '">' + o[1] + '</button>').join('')
+    + '</div>';
+}
+function sessionRow(s, withDate){
+  const m = markOf(s);
+  const when = (withDate ? prettyDate(s.date) + ', ' : '') + hhmm(s.start);
+  return '<li class="srow ' + m + '"><div class="sinfo"><b>' + esc(s.code) + '</b><span>' + esc(when) + ' &middot; '
+    + esc(s.comp) + ' &middot; ' + h1(s.hours) + 'h' + (s.extra ? ' &middot; added' : '') + '</span>'
+    + (m === 'absent' && !isOver(s) ? '<em>planned</em>' : '') + '</div>' + markSeg(s, true) + '</li>';
+}
+// A course's whole term: what has happened, newest first, then what is next.
+// The expanded row used to show only what was to come, so an absence from
+// week one was nine Previous clicks away on the Week grid.
+function courseHistory(code){
+  const all = sessions().filter(s => s.code === code && s.counted);
+  const past = all.filter(isOver).reverse();
+  const next = all.filter(s => !isOver(s)).slice(0, 10);
+  return '<h4 class="sub-h">Already held &middot; ' + past.length + '</h4>'
+    + (past.length ? '<ul class="upnext scroll">' + past.map(s => sessionRow(s, true)).join('') + '</ul>'
+                   : '<p class="tiny muted" style="margin:6px 0 0">Nothing held yet' + (S.countFrom ? ' since you started counting' : '') + '.</p>')
+    + '<h4 class="sub-h">Next ' + (next.length || '') + '</h4>'
+    + (next.length ? '<ul class="upnext">' + next.map(s => sessionRow(s, true)).join('') + '</ul>'
+                   : '<p class="tiny muted" style="margin:6px 0 0">Nothing left on the calendar for this course.</p>');
+}
+
+// The first thing a new or never-checked profile sees. Every past class counts
+// as attended until something says otherwise - imported on 19 Oct, that was
+// 116 classes and 155h credited without a word and 100.0% on every course.
+// So the page asks, once, which of three things is true.
+function startupCard(){
+  if(S.reviewedThrough) return '';
+  const n = uncheckedCount(); if(!n) return '';
+  const logged = Object.keys(S.log).length;
+  const from = prettyDate(countFrom());
+  return '<section class="card startup"><h2>Before these numbers mean anything</h2>'
+    + '<p>' + n + ' class' + (n===1?' has':'es have') + ' been held since ' + esc(from) + '. '
+    + (logged ? 'You have marked ' + logged + ' of them; every other one counts as attended because nothing says otherwise.'
+              : 'This app has no record of any of them, so each one counts as attended - which is why every course reads as high as it does.')
+    + ' Which is true?</p>'
+    + '<div class="row"><button class="btn primary" id="su-check">I missed some - check them week by week</button>'
+    + '<button class="btn" id="su-today">I have no records - count from today</button>'
+    + '<button class="btn" id="su-all">' + (logged ? 'My log is up to date' : 'I attended all of them') + '</button></div>'
+    + '<p class="tiny muted" style="margin:12px 0 0">Counting from today drops the past from every figure here; the registrar still counts it, so Log &rsaquo; Reconcile is where the two meet.</p></section>';
+}
+function caveatLine(){
+  if(!S.reviewedThrough) return '';
+  const n = uncheckedCount(); if(!n) return '';
+  return '<p class="caveat"><span><b>' + n + ' unchecked class' + (n===1?'':'es') + '</b> since '
+    + esc(prettyDate(addDays(S.reviewedThrough, 1))) + ' ' + (n===1?'is':'are') + ' counted as attended in the figures below.</span>'
+    + '<button class="btn small" data-go="log">Check in</button></p>';
+}
+
+// --- Overview --------------------------------------------------------------
 
 // One bar, drawn to scale, used by the hero, every course row and term
 // progress. `fill` and `tick` are percentages of the same 0-100 axis, so the
@@ -993,18 +1336,6 @@ function gauge(fill, tick, state, label){
     + '<i style="width:' + f.toFixed(1) + '%"></i>'
     + (tick == null ? '' : '<b style="left:' + Math.max(0, Math.min(100, tick)).toFixed(1) + '%"></b>')
     + '</div>';
-}
-
-// A clickable session. One click cycles attending -> absent -> cancelled, the
-// same gesture and the same handler as a block on the Week grid.
-function sessionRow(s, withDate){
-  const m = markOf(s);
-  const when = (withDate ? prettyDate(s.date) + ', ' : '') + hhmm(s.start);
-  const word = m === 'attended' ? 'attending' : m === 'absent' ? 'absent' : 'cancelled';
-  return '<li><button class="' + m + '" data-sid="' + esc(s.id) + '" aria-label="'
-    + esc(s.code + ' ' + when + ', ' + h1(s.hours) + ' hours, currently ' + word + '. Click to change.') + '">'
-    + '<b>' + esc(s.code) + '</b><span>' + esc(when) + '</span>'
-    + '<em>' + (m === 'attended' ? h1(s.hours) + 'h' : word) + '</em></button></li>';
 }
 
 // Everything still to come, from right now. Shared by the rail card and by an
@@ -1076,9 +1407,6 @@ function heroView(){
   // absent" is an app nudging you to skip a class. These are three equal
   // statements of fact, and the one already true is pressed rather than
   // disabled - disabled greyed out the only accurate button on the row.
-  const seg = [['attended','Attending','on-att'], ['absent','Absent','on-abs'], ['cancelled','Cancelled','on-can']]
-    .map(o => '<button class="' + o[2] + '" role="radio" data-mark="' + esc(s0.id) + '" data-to="' + o[0] + '"'
-      + ' aria-checked="' + (mark === o[0]) + '"' + (mark === o[0] ? ' tabindex="0"' : ' tabindex="-1"') + '>' + o[1] + '</button>').join('');
   return '<section class="hero ' + st.state + '">'
     + '<div class="hero-main">'
     + '<div class="hero-k">Next up <span class="hero-when">' + esc(whenLabel(s0)) + '</span></div>'
@@ -1088,14 +1416,14 @@ function heroView(){
     + (s0.room ? ' &middot; ' + esc(s0.room) : '') + ' &middot; ' + h1(s0.hours) + 'h</p>'
     + '<p class="hero-cost">' + cost_line + '</p></div>'
     + heroStat(st)
-    + '<div class="hero-actions"><div class="seg" role="radiogroup" aria-label="Mark this class">' + seg + '</div>'
+    + '<div class="hero-actions">' + markSeg(s0)
     + '<span class="tiny muted">This one class, on ' + esc(prettyDate(s0.date)) + '.</span></div>'
     + '</section>';
 }
 
 // The next seven days, in the rail. Not a duplicate of the Week grid: the grid
-// answers "where do I have to be", this answers "what is coming and what does
-// each one cost", and it logs from the same click.
+// answers "where do I have to be", this answers "what is coming", and each one
+// takes its mark from the same explicit buttons as everywhere else.
 function upNextCard(){
   const lim = addDays(today(), 7);
   const rows = upcoming(s => s.date <= lim, 8);
@@ -1106,7 +1434,7 @@ function upNextCard(){
   const hours = rows.reduce((a,s) => a + (markOf(s) === 'cancelled' ? 0 : s.hours), 0);
   return '<div class="card"><h2>Next seven days</h2>'
     + '<p class="tiny muted" style="margin:0">' + rows.length + ' class' + (rows.length===1?'':'es')
-    + ' &middot; ' + h1(hours) + 'h. Click one to cycle it: attending, absent, cancelled.</p>'
+    + ' &middot; ' + h1(hours) + 'h. Mark one you already know you will skip.</p>'
     + '<ul class="upnext">' + rows.map(s => sessionRow(s, true)).join('') + '</ul></div>';
 }
 
@@ -1114,7 +1442,7 @@ function countFromCard(){
   const cf = countFrom(), x = excluded();
   const on = S.countFrom && S.countFrom > CALENDAR.start;
   return '<div class="card"><h2>Start counting from</h2>'
-    + '<p class="tiny muted">The day you actually started keeping records. Classes before it still show on the Week grid, greyed out, but count toward nothing.</p>'
+    + '<p class="tiny muted">The day you actually started keeping records. Classes before it still show on the Week grid, greyed out, but count toward nothing. The start-up question sets this for you if you pick \'count from today\'.</p>'
     + '<div class="row"><label class="field">Date<input type="date" id="cf-date" value="' + cf
     + '" min="' + CALENDAR.start + '" max="' + CALENDAR.end + '"></label></div>'
     + '<p class="tiny ' + (on ? 'est' : 'muted') + '" style="margin:12px 0 0">'
@@ -1163,7 +1491,14 @@ function progressCard(all){
     + prettyDate(CALENDAR.end) + '.</p></div>';
 }
 
-function coursesView(){
+// Leave in the unit a student decides in. The class count is floored against
+// the longest class still to come, exactly as stats() derives it.
+function leaveCell(st){
+  if(st.state === 'over') return '<b>under the bar</b><span>' + hUp(st.shortHours) + 'h short</span>';
+  return '<b>' + st.budgetSessions + ' class' + (st.budgetSessions===1?'':'es') + '</b><span>' + hDown(st.budgetHours) + 'h</span>';
+}
+
+function overviewView(){
   const all = S.courses.map(c => ({c, st: stats(c.code)}));
   // Worst first. What you open this page to find out is which course is in
   // trouble, not which one is fine.
@@ -1171,38 +1506,40 @@ function coursesView(){
     const rank = {over:0, close:1, safe:2, none:3};
     return rank[a.st.state] - rank[b.st.state] || (a.st.budgetHours - b.st.budgetHours);
   });
+  const unchk = {};
+  if(S.reviewedThrough) uncheckedSessions().forEach(s => { if(markOf(s) !== 'cancelled') unchk[s.code] = (unchk[s.code]||0) + 1; });
   const list = all.map(({c, st}) => {
     const open = openCourse === c.code;
-    // The bar was a number in 0.75rem grey at the bottom of the row - the one
-    // figure the percentage is judged against, rendered as the smallest thing
-    // on it. The tick is that number, drawn where it falls.
-    const meter = st.pct == null ? ''
-      : '<div class="meter">' + gauge(st.pct*100, st.thr*100, st.state,
-            pctText(st.pct) + ' attended in ' + c.code + ', against a ' + Math.round(st.thr*100) + ' percent bar')
-        + '<em>bar ' + Math.round(st.thr*100) + '%</em></div>';
+    const nx = upcoming(s => s.code === c.code, 1)[0];
+    const pct = st.pct == null ? 'no data' : pctText(st.pct);
     let panel = '';
     if(open){
-      const next = upcoming(s => s.code === c.code, 10);
-      panel = '<div class="cx">' + (next.length
-        ? '<p class="tiny muted" style="margin:0">Still to come. Click one to cycle it.</p>'
-          + '<ul class="upnext">' + next.map(s => sessionRow(s, true)).join('') + '</ul>'
-        : '<p class="tiny muted" style="margin:0">Nothing left on the calendar for this course.</p>') + '</div>';
+      const u = unchk[c.code];
+      panel = '<div class="cx"><p class="line">' + esc(stateLine(st))
+        + (u ? ' <span class="est">' + u + ' of the classes behind this are unchecked.</span>' : '') + '</p>'
+        + (st.pct == null ? '' : '<div class="meter">' + gauge(st.pct*100, st.thr*100, st.state,
+            pct + ' attended in ' + c.code + ', against a ' + Math.round(st.thr*100) + ' percent bar')
+            + '<em>bar ' + Math.round(st.thr*100) + '%</em></div>')
+        + '<p class="subl">' + h1(st.attended) + 'h attended of ' + h1(st.held) + 'h held &middot; ' + h1(st.total) + 'h scheduled in all</p>'
+        + courseHistory(c.code) + '</div>';
     }
-    return '<article class="course ' + st.state + '" data-course="' + esc(c.code) + '">'
-      + '<div><button class="code" data-course="' + esc(c.code) + '" aria-expanded="' + open + '">'
-      + esc(c.code) + '</button>'
-      + '<div class="ttl">' + esc(c.title || '') + '</div></div>'
-      + '<div class="pct">' + (st.pct == null ? 'no data' : pctText(st.pct)) + '</div>'
-      + '<div class="line">' + esc(stateLine(st)) + '</div>'
-      + meter
-      + '<div class="sub">' + h1(st.attended) + 'h attended / ' + h1(st.held) + 'h held &middot; '
-      + h1(st.total) + 'h scheduled</div>'
-      + panel + '</article>';
+    return '<article class="course ' + st.state + '">'
+      + '<div class="crow" data-course="' + esc(c.code) + '">'
+      + '<div class="cwho"><button class="code" data-course="' + esc(c.code) + '" aria-expanded="' + open + '">'
+      + esc(c.code) + '</button><div class="ttl">' + esc(c.title || '') + '</div></div>'
+      + '<div class="cpct"><div class="pct">' + pct + '</div>'
+      + (st.pct == null ? '' : gauge(st.pct*100, st.thr*100, st.state)) + '</div>'
+      + '<div class="cfig cleave"><span class="lab">Leave </span>' + leaveCell(st) + '</div>'
+      + '<div class="cfig cmiss"><span class="lab">Missed </span><b>' + st.nAbsent + '</b><span>' + h1(st.absent) + 'h</span></div>'
+      + '<div class="cfig cnext"><span class="lab">Next </span>' + (nx ? '<b>' + esc(prettyDate(nx.date)) + '</b><span>' + hhmm(nx.start) + '</span>' : '<span>none left</span>') + '</div>'
+      + '</div>' + panel + '</article>';
   }).join('');
 
-  return '<div class="split"><div>' + heroView()
-    + '<h2 style="margin:0 0 12px">Every course</h2>' + list + '</div>'
-    + '<aside class="rail">' + progressCard(all) + upNextCard() + countFromCard() + barCard(all) + '</aside></div>';
+  return startupCard() + '<div class="split"><div>' + heroView()
+    + '<h2 style="margin:0 0 12px">Every course</h2>' + caveatLine()
+    + '<div class="chead" aria-hidden="true"><span>Course</span><span>Attended</span><span>Leave left</span><span>Missed</span><span>Next</span></div>'
+    + list + '</div>'
+    + '<aside class="rail">' + progressCard(all) + upNextCard() + barCard(all) + '</aside></div>';
 }
 
 // --- Week view -------------------------------------------------------------
@@ -1224,7 +1561,7 @@ function weekView(){
     + '<button class="btn small" data-week="0">This week</button>'
     + '<button class="btn small" data-week="1">Next &rarr;</button>'
     + '<span class="muted tiny">'+prettyDate(weekDates[0])+' – '+prettyDate(weekDates[5])
-    + ' · click a class to cycle attended → absent → cancelled</span></div>';
+    + ' · click a class to mark it</span></div>';
 
   if(!inWeek.length && (weekDates[5] < CALENDAR.start || weekDates[0] > CALENDAR.end))
     h += '<div class="banner warn"><b>Outside the semester</b>This week falls before '+prettyDate(CALENDAR.start)+' or after '+prettyDate(CALENDAR.end)+', so it holds no sessions.</div>';
@@ -1249,11 +1586,11 @@ function weekView(){
       // hold no mark that would change a number, and a control that silently
       // does nothing is worse than one that is visibly off.
       const cls = s.counted ? mark + (s.extra?' extra':'') : 'uncounted';
-      const tip = s.counted ? mark : 'not counted - before ' + prettyDate(countFrom());
+      const tip = s.counted ? MARK_WORD[mark] + (mark === 'absent' && !isOver(s) ? ' (planned)' : '') : 'not counted - before ' + prettyDate(countFrom());
       h += '<button class="blk '+cls+'" '+(s.counted ? 'data-sid="'+esc(s.id)+'"' : 'disabled')
         + ' style="top:'+top+'px;height:'+ht+'px" '
         + 'title="'+esc(s.code+' '+s.comp+' '+s.sec+' · '+h1(s.hours)+'h · '+tip)+'">'
-        + '<span class="tag">'+(s.counted ? (s.extra?'added':mark) : 'not counted')+(s.swapped?' · swap':'')+'</span>'
+        + '<span class="tag">'+(s.counted ? (s.extra?'added · ':'')+MARK_WORD[mark]+(mark==='absent' && !isOver(s)?' · planned':'') : 'not counted')+(s.swapped?' · swap':'')+'</span>'
         + '<b>'+esc(s.code)+'</b>'+esc(s.comp)+' '+hhmm(s.start)+'</button>';
     });
     h += '</div>';
@@ -1280,53 +1617,288 @@ function weekView(){
   return h;
 }
 
-// --- Reconcile -------------------------------------------------------------
-//
+// --- Log: check-in, one course's term, reconcile, count-from -------------
+
+let logCourse = null;     // the course picked under "Fix one course"
+
+// The oldest unchecked week first. Check-in moves a single date forward, so it
+// has to go in order: saving a recent week while an older one sat unread would
+// declare the older one checked too.
+function checkinCard(){
+  const q = uncheckedSessions();
+  if(!q.length){
+    return '<div class="card"><h2>Check in</h2><p class="tiny muted" style="margin:0">'
+      + (S.reviewedThrough ? 'Everything held up to ' + esc(prettyDate(S.reviewedThrough)) + ' is checked. Nothing is waiting.'
+                           : 'No class has been held yet, so there is nothing to check.') + '</p></div>';
+  }
+  const wk = weekMonday(q[0].date), end = addDays(wk, 6);
+  const these = q.filter(s => s.date <= end), rest = q.length - these.length;
+  const weeks = new Set(q.map(s => weekMonday(s.date))).size;
+  const byDay = {};
+  these.forEach(s => (byDay[s.date] = byDay[s.date] || []).push(s));
+  return '<div class="card"><h2>Check in &middot; week of ' + esc(prettyDate(wk)) + '</h2>'
+    + '<p class="tiny muted" style="margin:0">' + these.length + ' class' + (these.length===1?'':'es') + ' this week'
+    + (rest ? ', ' + rest + ' more across ' + (weeks-1) + ' later week' + (weeks===2?'':'s') : '') + '. '
+    + 'Each one starts as attended. Marks save the moment you tap them; the button at the end records that the week is right.</p>'
+    + Object.keys(byDay).map(d => '<div class="ckday"><div class="spread"><h4>' + esc(prettyDate(d)) + '</h4>'
+      + '<button class="btn small ghost" data-dayall="' + d + '">All attended</button></div>'
+      + '<ul class="upnext">' + byDay[d].map(s => sessionRow(s, false)).join('') + '</ul></div>').join('')
+    + '<div class="row" style="margin-top:16px"><button class="btn primary" id="ck-save" data-through="' + these[these.length-1].date + '">'
+    + 'This week is right</button></div></div>';
+}
+
 // The official record is the authority; this app is not. So reconcile reports
 // the gap and offers candidates, and every flip is your click. It never edits
-// itself to agree with a number you typed - that would launder a typo into a
+// itself to agree with a figure you typed - that would launder a typo into a
 // budget you then trust.
-
-function reconcileView(){
+//
+// It takes either "84.4" or "27/32". A percentage used to be the only form,
+// converted to hours against this app's own held hours - wrong by exactly the
+// excluded weeks once a count-from date was set. A count is compared in
+// classes against the registrar's own denominator, so that error cannot arise.
+function parseOfficial(v){
+  if(v == null || v === '') return null;
+  const t = String(v).trim().replace(/%$/, '').trim();
+  const m = t.match(/^(\d+)\s*(?:\/|of)\s*(\d+)$/i);
+  if(m){ const att = +m[1], held = +m[2]; return (held > 0 && att <= held) ? {kind:'count', att, held} : {bad:true}; }
+  const n = Number(t);
+  return (t !== '' && isFinite(n) && n >= 0 && n <= 100) ? {kind:'pct', pct:n} : {bad:true};
+}
+function reconcileCard(){
   let h = '<div class="card"><h2>Reconcile against the official record</h2>'
-    + '<p class="tiny muted">Type the percentage your official record shows. This app reports the difference and lists sessions you could flip. It changes nothing on its own.</p></div>';
+    + '<p class="tiny muted">Type what the official record shows: a percentage like <code>84.4</code>, or classes attended of held like <code>27/32</code>. This app reports the difference and lists classes you could flip. It changes nothing on its own.</p>';
   S.courses.forEach(c => {
     const st = stats(c.code);
-    const off = S.official[c.code];
-    h += '<div class="card"><div class="spread"><h3>'+esc(c.code)+'</h3>'
-      + '<div class="muted tiny">this app says '+(st.pct==null?'—':pctText(st.pct))+' ('+h1(st.attended)+'h of '+h1(st.held)+'h)</div></div>'
-      + '<div class="row"><label class="field">Official %<input type="number" min="0" max="100" step="0.1" style="width:90px" data-off="'+esc(c.code)+'" value="'+(off==null?'':off)+'"></label>';
-    if(off != null && st.nHeld){
-      const officialAttended = off/100*st.held;
-      const gap = st.attended - officialAttended;       // + means we over-count attendance
-      const approx = Math.round(Math.abs(gap)/st.step*10)/10;
-      h += '<div class="tiny">'+(Math.abs(gap) < 0.05
-        ? 'Agrees within half a percent. Nothing to flip.'
-        : (gap > 0
-            ? 'This app credits you <b>'+h1(gap)+'h</b> more than the record does (about '+approx+' classes). You likely forgot to log an absence.'
-            : 'The record credits you <b>'+h1(-gap)+'h</b> more than this app does (about '+approx+' classes). You likely logged an absence you did not take.'))
-        + '</div>';
-    }
-    h += '</div>';
-    if(off != null && st.nHeld){
-      const officialAttended = off/100*st.held;
-      const gap = st.attended - officialAttended;
-      if(Math.abs(gap) >= 0.05){
-        // Most recent first: a missed log is far more common than a false one,
-        // and the class you forgot to log is almost always a recent one.
-        const want = gap > 0 ? 'attended' : 'absent';
-        const cands = sessions().filter(s => s.code === c.code && s.date < today() && markOf(s) === want)
-                                .sort((a,b) => a.date < b.date ? 1 : a.date > b.date ? -1 : b.start - a.start).slice(0,12);
-        h += '<div class="tablewrap"><table><thead><tr><th>Date</th><th>Class</th><th class="num">Hours</th><th></th></tr></thead><tbody>'
-          + (cands.length ? cands.map(s => '<tr><td>'+prettyDate(s.date)+'</td><td>'+esc(s.comp+' '+s.sec)+' '+hhmm(s.start)+'</td>'
-            + '<td class="num">'+h1(s.hours)+'h</td><td><button class="btn small" data-flip="'+esc(s.id)+'" data-to="'+(gap>0?'absent':'attended')+'">Mark '+(gap>0?'absent':'attended')+'</button></td></tr>').join('')
-            : '<tr><td colspan="4" class="muted">No sessions marked '+want+' to flip.</td></tr>')
-          + '</tbody></table></div>';
+    const raw = S.official[c.code];
+    const o = parseOfficial(raw);
+    h += '<div class="ckday"><div class="spread"><h4>' + esc(c.code) + '</h4>'
+      + '<span class="tiny muted">this app: ' + (st.pct == null ? '—' : pctText(st.pct)) + ', ' + (st.nHeld - st.nAbsent) + ' of ' + st.nHeld + ' classes</span></div>'
+      + '<div class="row" style="margin-top:6px"><label class="field">Official record<input type="text" inputmode="decimal" style="width:16ch" data-off="'
+      + esc(c.code) + '" value="' + esc(raw == null ? '' : raw) + '" placeholder="84.4 or 27/32"></label>';
+    let want = null, gapTxt = '';
+    if(o && o.bad) gapTxt = '<span class="tiny est">That is not a figure this can read. Type 84.4 or 27/32.</span>';
+    else if(o && st.nHeld){
+      if(o.kind === 'count'){
+        const offMiss = o.held - o.att, gap = offMiss - st.nAbsent;    // + means the record has more absences
+        gapTxt = (gap === 0 ? 'Same number of absences as the record: ' + offMiss + '.'
+               : gap > 0 ? 'The record has <b>' + gap + '</b> more absence' + (gap===1?'':'s') + ' than this app. You likely forgot to log ' + (gap===1?'one':'them') + '.'
+                         : 'This app has <b>' + (-gap) + '</b> more absence' + (gap===-1?'':'s') + ' than the record. You likely logged one you did not take.')
+          + (o.held !== st.nHeld ? ' The record counts ' + o.held + ' classes held, this app ' + st.nHeld + ' - a cancellation or the count-from date accounts for the difference.' : '');
+        if(gap) want = gap > 0 ? 'attended' : 'absent';
+      } else {
+        const gap = st.attended - o.pct/100*st.held;                    // + means this app over-credits
+        const approx = Math.round(Math.abs(gap)/st.step*10)/10;
+        gapTxt = Math.abs(gap) < 0.05 ? 'Agrees within half a percent. Nothing to flip.'
+          : gap > 0 ? 'This app credits you <b>' + h1(gap) + 'h</b> more than the record does (about ' + approx + ' classes). You likely forgot to log an absence.'
+                    : 'The record credits you <b>' + h1(-gap) + 'h</b> more than this app does (about ' + approx + ' classes). You likely logged an absence you did not take.';
+        if(Math.abs(gap) >= 0.05) want = gap > 0 ? 'attended' : 'absent';
+        if(S.countFrom) gapTxt += ' A percentage is compared against this app\'s held hours, which leave out the weeks before your count-from date - type the record as 27/32 for an exact comparison.';
       }
+      gapTxt = '<span class="tiny">' + gapTxt + '</span>';
+    }
+    h += gapTxt + '</div>';
+    if(want){
+      // Most recent first: the class you forgot to log is almost always a recent one.
+      const cands = sessions().filter(s => s.code === c.code && s.counted && s.date < today() && markOf(s) === want).reverse().slice(0, 12);
+      h += cands.length ? '<ul class="upnext">' + cands.map(s => sessionRow(s, true)).join('') + '</ul>'
+                        : '<p class="tiny muted">No class marked ' + MARK_WORD[want] + ' to flip.</p>';
     }
     h += '</div>';
   });
-  return h;
+  return h + '</div>';
+}
+
+function logView(){
+  if(!logCourse || !S.courses.some(c => c.code === logCourse)) logCourse = S.courses[0].code;
+  // No start-up question here: the check-in below is the answer to it.
+  return '<div class="split"><div>' + checkinCard()
+    + '<div class="card"><h2>Fix one course</h2><p class="tiny muted">Every class of the term, newest first. Set any one of them directly.</p>'
+    + '<label class="field">Course<select id="lg-course">' + S.courses.map(c => '<option value="' + esc(c.code) + '"'
+      + (c.code === logCourse ? ' selected' : '') + '>' + esc(c.code) + '</option>').join('') + '</select></label>'
+    + '<div style="margin-top:12px">' + courseHistory(logCourse) + '</div></div></div>'
+    + '<aside class="rail">' + reconcileCard() + countFromCard() + '</aside></div>';
+}
+
+// --- Leave: the live planner ----------------------------------------------
+//
+// Whole days only. A day you plan off prices every class you would still have
+// that day as missed, through stats() with a what-if set, and every other day
+// is re-judged against the plan so far. The yes/no reads stats()'s raw budget,
+// never the floored figure on screen: the planner must not round in your
+// favour any more than the Overview may.
+
+const MAX_BREAK = 9;      // longest window "Breaks you can afford" looks at, in days
+const MAX_SKIP  = 3;      // most class days one suggested break may ask you to skip
+const MAX_BREAKS = 6;     // how many suggestions are shown
+let planFocus = null;     // the day last clicked, described under the calendar
+
+// The classes on day d you could still skip: counted, not cancelled, not over.
+function skippable(d){ return sessions().filter(s => s.date === d && s.counted && markOf(s) !== 'cancelled' && !isOver(s)); }
+function planSet(days){ const set = new Set(); days.forEach(d => skippable(d).forEach(s => set.add(s.id))); return set; }
+function dayKind(d){
+  if((CALENDAR.off || []).indexOf(d) >= 0) return 'off';
+  if(dowName(d) === 'Sun' && !(CALENDAR.swaps || {})[d]) return 'sun';
+  if(skippable(d).length) return 'teach';
+  // Classes happened today and all are over: not a day off, nothing to plan.
+  return sessions().some(s => s.date === d && s.counted && markOf(s) !== 'cancelled') ? 'done' : 'free';
+}
+// The worst a set of what-if absences does to the courses in `codes`.
+// no: some course ends the term under its bar. tight: none does, but one is
+// left with less than one class of leave. ok: neither.
+function verdict(set, codes){
+  let worst = null, tight = null;
+  codes.forEach(code => {
+    const st = stats(code, set);
+    if(st.budget < -1e-9){ if(!worst || st.budget < worst.budget) worst = st; }
+    else if(st.budget < st.step - 1e-9 && !tight) tight = st;
+  });
+  return worst ? {k:'no', st:worst} : tight ? {k:'tight', st:tight} : {k:'ok'};
+}
+function costText(list){
+  const by = {};
+  list.forEach(s => by[s.code] = (by[s.code] || 0) + s.hours);
+  return Object.keys(by).map(c => c + ' ' + h1(by[c]) + 'h').join(', ');
+}
+function verdictText(v){
+  if(v.k === 'no') return 'puts ' + v.st.code + ' ' + hUp(-v.st.budget) + 'h under ' + Math.round(v.st.thr*100) + '% by the end of term';
+  if(v.k === 'tight') return 'affordable, but leaves ' + v.st.code + ' with less than one class of leave';
+  return 'affordable';
+}
+
+// The days from today to the end of term, each with its kind and, for a
+// class day, its verdict on top of the plan as it stands.
+function judgeDays(plan){
+  const base = planSet(plan), out = {};
+  for(let d = today(); d <= CALENDAR.end; d = addDays(d, 1)){
+    const k = dayKind(d), o = {k};
+    if(k === 'teach'){
+      o.list = skippable(d);
+      if(plan.indexOf(d) >= 0) o.v = {k:'planned'};
+      else {
+        const set = new Set(base); o.list.forEach(s => set.add(s.id));
+        o.v = verdict(set, Array.from(new Set(o.list.map(s => s.code))));
+      }
+    }
+    out[d] = o;
+  }
+  return out;
+}
+
+// Breaks you can afford. Every window of up to MAX_BREAK days from today in
+// which each day is either already off (a holiday, a Sunday, a day with no
+// class of yours, a day already planned) or a class day you would skip, with
+// at most MAX_SKIP skipped. A window starts where the day before it is a class
+// day and stops where the next one is, so it cannot be stretched by one more
+// free day. Kept only if affordable on top of the current plan. Ranked by days
+// off per day skipped, then by hours spent.
+// ponytail: exhaustive over ~45 days x 9 lengths, each priced with stats();
+// cheap at one term, would want per-course caching for a year-long calendar.
+function breaks(plan, days){
+  const ds = Object.keys(days).sort();
+  const free = d => { const k = days[d] && days[d].k; return k === 'off' || k === 'sun' || k === 'free' || plan.indexOf(d) >= 0; };
+  const base = planSet(plan), out = [];
+  for(let i = 0; i < ds.length; i++){
+    if(i > 0 && free(ds[i-1])) continue;
+    const skip = [];
+    for(let j = i; j < ds.length && j < i + MAX_BREAK; j++){
+      const d = ds[j];
+      if(days[d].k === 'done') break;
+      if(!free(d)){ skip.push(d); if(skip.length > MAX_SKIP) break; }
+      if(ds[j+1] && free(ds[j+1])) continue;
+      const len = j - i + 1;
+      if(!skip.length || len === skip.length) continue;
+      const list = [].concat.apply([], skip.map(x => days[x].list));
+      const set = new Set(base); list.forEach(s => set.add(s.id));
+      if(verdict(set, S.courses.map(c => c.code)).k === 'no') continue;
+      out.push({from: ds[i], to: d, len, skip: skip.slice(), list, hours: list.reduce((a,s) => a + s.hours, 0)});
+    }
+  }
+  out.sort((a,b) => (b.len/b.skip.length - a.len/a.skip.length) || (a.hours - b.hours) || (a.from < b.from ? -1 : 1));
+  return out.slice(0, MAX_BREAKS);
+}
+
+function leaveCalendar(days){
+  const ds = Object.keys(days).sort();
+  if(!ds.length) return '<p class="tiny muted">The term is over.</p>';
+  let h = '<div class="months lmonths">';
+  let cur = fromYmd(ds[0]); cur.setDate(1);
+  const last = fromYmd(ds[ds.length-1]), t = today();
+  while(cur <= last){
+    const y = cur.getFullYear(), m = cur.getMonth();
+    h += '<div class="month card"><h3>' + cur.toLocaleDateString(undefined,{month:'long', year:'numeric'}) + '</h3><div class="lgrid">'
+      + ['M','T','W','T','F','S','S'].map(d => '<div class="dow">' + d + '</div>').join('');
+    const lead = (new Date(y,m,1).getDay()+6)%7;
+    for(let i = 0; i < lead; i++) h += '<div class="lday blank"></div>';
+    const dim = new Date(y,m+1,0).getDate();
+    for(let dd = 1; dd <= dim; dd++){
+      const k = ymd(new Date(y,m,dd)), o = days[k], tc = k === t ? ' today' : '';
+      const swap = (CALENDAR.swaps || {})[k];
+      if(!o){ h += '<div class="lday done' + tc + '"><span class="n">' + dd + '</span></div>'; continue; }
+      if(o.k !== 'teach'){
+        const lab = o.k === 'off' ? 'holiday' : o.k === 'free' ? 'free' : o.k === 'done' ? 'done' : '';
+        h += '<div class="lday ' + o.k + tc + '"><span class="n">' + dd + '</span><small>' + lab + '</small></div>';
+        continue;
+      }
+      const hrs = o.list.reduce((a,s) => a + s.hours, 0);
+      const tip = prettyDate(k) + ': ' + costText(o.list) + ' - ' + (o.v.k === 'planned' ? 'planned off' : verdictText(o.v));
+      h += '<button class="lday ' + o.v.k + tc + (planFocus === k ? ' focus' : '') + '" data-plan="' + k + '" aria-pressed="' + (o.v.k === 'planned')
+        + '" title="' + esc(tip) + '" aria-label="' + esc(tip) + '"><span class="n">' + dd + '</span><small>'
+        + o.list.length + ' cls</small><small>' + h1(hrs) + 'h</small>' + (swap ? '<small>runs ' + swap + '</small>' : '') + '</button>';
+    }
+    h += '</div></div>';
+    cur = new Date(y, m+1, 1);
+  }
+  return h + '</div>';
+}
+
+function leaveView(){
+  const plan = S.leavePlan.slice().sort();
+  const days = judgeDays(plan);
+  const set = planSet(plan);
+  const nCls = set.size;
+  let focus = '';
+  if(planFocus && days[planFocus] && days[planFocus].k === 'teach'){
+    const o = days[planFocus];
+    focus = '<p class="lfocus"><b>' + esc(prettyDate(planFocus)) + '</b> &middot; ' + esc(o.list.map(s => s.code + ' ' + s.comp + ' ' + hhmm(s.start) + ' ' + h1(s.hours) + 'h').join(', '))
+      + '<br>' + (o.v.k === 'planned' ? 'In your plan. Click it again to take it out.' : 'Skipping this day too ' + esc(verdictText(o.v)) + '.') + '</p>';
+  }
+  let h = '<div class="split"><div>'
+    + '<div class="card"><h2>Plan days off</h2><p class="tiny muted" style="margin:0">Click a class day to add it to the plan, again to take it out. Every other day re-judges itself against the plan as you go. Nothing is marked missed until you say so.</p>'
+    + '<div class="lkey"><span class="k-ok"><i></i>affordable</span><span class="k-tight"><i></i>tight - under one class left somewhere</span>'
+    + '<span class="k-no"><i></i>would put a course under its bar</span><span class="k-pl"><i></i>planned</span></div>' + focus + '</div>'
+    + leaveCalendar(days) + '</div><aside class="rail">';
+
+  // What the plan spends, course by course, next to what there is.
+  if(!plan.length){
+    h += '<div class="card">' + figureSlot('keys') + '<h2>Nothing planned</h2><p class="tiny muted" style="margin:0">Pick a day on the calendar, or take one of the breaks below. Each course\'s leave before and after the plan shows here.</p></div>';
+  } else {
+    h += '<div class="card"><h2>This plan &middot; ' + plan.length + ' day' + (plan.length===1?'':'s') + ', ' + nCls + ' class' + (nCls===1?'':'es') + '</h2>';
+    S.courses.forEach(c => {
+      const a = stats(c.code), b = stats(c.code, set);
+      const spent = Math.max(0, a.budget - b.budget);
+      const cls = b.budget < -1e-9 ? 'bad' : b.budget < b.step - 1e-9 ? 'warn' : '';
+      const after = b.budget < -1e-9 ? hUp(-b.budget) + 'h under by term end' : b.budgetSessions + ' cls &middot; ' + hDown(b.budgetHours) + 'h';
+      const keep = a.budgetHours > 0 ? Math.max(0, b.budgetHours) / a.budgetHours * 100 : 0;
+      h += '<div class="lc"><b>' + esc(c.code) + '</b><span class="to ' + cls + '">' + a.budgetSessions + ' &rarr; ' + after + '</span>'
+        + (a.budgetHours > 0 ? '<div class="lbar" role="img" aria-label="' + esc(c.code + ': ' + h1(spent) + ' of ' + hDown(a.budgetHours) + ' hours of leave spent by this plan') + '"><i style="width:'
+          + keep.toFixed(1) + '%"></i><s style="left:' + keep.toFixed(1) + '%; width:' + Math.min(100 - keep, spent / a.budgetHours * 100).toFixed(1) + '%"></s></div>' : '')
+        + '</div>';
+    });
+    const v = verdict(set, S.courses.map(c => c.code));
+    if(v.k === 'no') h += '<div class="banner bad" style="margin:12px 0 0"><b>This plan does not fit</b>It ' + esc(verdictText(v)) + '. A mark changed since you planned, or a day was added from a stale view.</div>';
+    h += '<div class="row" style="margin-top:14px"><button class="btn primary" id="pl-commit"' + (nCls ? '' : ' disabled') + '>Mark these ' + nCls + ' as skipping</button>'
+      + '<button class="btn" id="pl-clear">Clear plan</button></div>'
+      + '<p class="tiny muted" style="margin:10px 0 0">Marking sets each class to skipping, which every figure in the app already counts. Undo is one click.</p></div>';
+  }
+
+  const br = breaks(plan, days);
+  h += '<div class="card"><h2>Breaks you can afford</h2>';
+  if(!br.length) h += '<p class="tiny muted" style="margin:0">None fit on top of ' + (plan.length ? 'this plan' : 'your current leave') + '.</p>';
+  else h += br.map(b => '<div class="brk"><div><b>' + esc(prettyDate(b.from)) + ' &ndash; ' + esc(prettyDate(b.to)) + '</b> &middot; ' + b.len + ' days off'
+      + '<p>Skip ' + esc(b.skip.map(prettyDate).join(', ')) + ' &middot; ' + esc(costText(b.list)) + '</p></div>'
+      + '<button class="btn small" data-break="' + b.skip.join(',') + '">Add</button></div>').join('');
+  h += '<p class="tiny muted" style="margin:10px 0 0">Whole days, windows of up to ' + MAX_BREAK + ' days with at most ' + MAX_SKIP + ' skipped. One skipped class on its own is a mark on the Week grid.</p></div>';
+  return h + '</aside></div>';
 }
 
 // --- Calendar editor -------------------------------------------------------
@@ -1433,12 +2005,22 @@ function dataView(){
     + '<div class="row"><button class="btn" id="bk-btn">Download a backup</button>'
     + '<input type="file" id="rs-file" accept="application/json,.json"></div><div id="bk-msg"></div></div>';
   const arch = Object.keys(localStorage).filter(k => k.indexOf(ARCHIVE_PRE) === 0);
+  const rescued = Object.keys(localStorage).filter(k => k.indexOf(RESCUE_PRE) === 0).sort();
+  if(rescued.length) h += '<div class="card"><h2>Profiles that could not be read</h2><p class="tiny muted">Set aside verbatim when they failed to load, before anything could overwrite them. Download one to repair it by hand, then restore it above.</p>'
+    + rescued.map(k => '<div class="row"><code>'+esc(k)+'</code><span class="tiny muted">'+esc(new Date(+k.slice(RESCUE_PRE.length)).toLocaleString())+'</span><button class="btn small" data-rescue="'+esc(k)+'">Download</button></div>').join('') + '</div>';
   if(arch.length) h += '<div class="card"><h2>Archived semesters</h2><p class="tiny muted">Kept, never mixed into the current term. There is no browser for them - download one as a backup file if you need it.</p>'
     + arch.map(k => '<div class="row"><code>'+esc(k)+'</code><button class="btn small" data-arch="'+esc(k)+'">Download</button></div>').join('') + '</div>';
   h += '<div class="card"><h2>Start over</h2><p class="tiny muted">Clears the whole profile from this browser. Take a backup first - this is not undoable.</p>'
     + '<button class="btn" id="wipe-btn">Clear everything</button> <span id="wipe-msg" class="tiny"></span></div>';
   return h;
 }
+
+function settingsView(){
+  return dataView()
+    + '<details class="disclose"' + (calOpen ? ' open' : '') + ' id="cal-details"><summary>Semester calendar editor &middot; once a term</summary><div class="body">'
+    + calendarView() + '</div></details>';
+}
+let calOpen = false;
 
 function readJSON(file){
   return new Promise((res, rej) => {
@@ -1515,33 +2097,106 @@ function applyImport(){
   // longer generates simply stops counting; if the section moves back, it
   // counts again. Deleting it here is the silent data loss A2 is about.
   save(); invalidate(); PENDING = null;
-  view = 'courses'; render();
-  toast('Imported ' + S.courses.length + ' courses. Undo is available on the Data tab.');
+  view = 'overview'; render();
+  toast('Imported ' + S.courses.length + ' courses. Undo is available under Settings.');
 }
 
 function download(obj, name){
-  const b = new Blob([JSON.stringify(obj, null, 2)], {type:'application/json'});
+  const b = new Blob([typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(b); a.download = name;
   document.body.appendChild(a); a.click();
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
 }
 
+// --- Week grid popover -----------------------------------------------------
+//
+// A class on the grid opens three explicit choices beside it rather than
+// stepping through them on each click. It sits outside #view and closes on a
+// choice, Escape, a click elsewhere or a scroll.
+let popFor = null;
+function openPop(btn, id){
+  const s = sessions().find(x => x.id === id); if(!s) return;
+  const el = $('#pop');
+  el.innerHTML = '<b>' + esc(s.code + ' ' + s.comp + ' ' + s.sec) + '</b><p>' + esc(prettyDate(s.date) + ', ' + hhmm(s.start) + '–' + hhmm(s.end)
+    + ' · ' + h1(s.hours) + 'h' + (s.room ? ' · ' + s.room : '')) + '</p>' + markSeg(s);
+  el.hidden = false; popFor = id;
+  const r = btn.getBoundingClientRect(), w = el.offsetWidth, ht = el.offsetHeight;
+  const left = Math.max(8, Math.min(r.left, innerWidth - w - 8));
+  const top = (r.bottom + 6 + ht < innerHeight) ? r.bottom + 6 : Math.max(8, r.top - ht - 6);
+  el.style.left = left + 'px'; el.style.top = top + 'px';
+  const on = el.querySelector('[aria-checked="true"]'); if(on) on.focus({preventScroll:true});
+}
+function closePop(){ const el = $('#pop'); if(el && !el.hidden){ el.hidden = true; el.innerHTML = ''; } popFor = null; }
+addEventListener('keydown', e => { if(e.key === 'Escape') closePop(); });
+addEventListener('scroll', closePop, {passive:true});
+
+// --- Hairline figures --------------------------------------------------------
+//
+// Mounted after each render into any [data-figure] slot the view wrote, and
+// destroyed before the next, because #view is replaced wholesale. The kernel
+// and the figures live in their own scripts below; without them a slot stays
+// an empty box rather than breaking the page.
+const FIGURES = {};
+let mounted = [];
+function figureSlot(name){ return '<div class="figure" data-figure="' + name + '"></div>'; }
+function mountFigures(){
+  if(!window.HL) return;
+  document.querySelectorAll('[data-figure]').forEach(slot => {
+    const f = FIGURES[slot.dataset.figure]; if(!f) return;
+    HL.inject(document);
+    slot.setAttribute('data-hairline', f.name);
+    slot.setAttribute('role', 'img');
+    slot.setAttribute('aria-label', f.means);
+    const svg = HL.mk('svg', { viewBox: '0 0 400 320', 'aria-hidden': 'true' }, slot);
+    // The read-out names what is under the pointer. Rule 10 keeps it out of
+    // the drawing; here it is spoken, not shown - a corner label on an empty
+    // state would be a second caption competing with the heading under it.
+    const read = { textContent: 'rest' };
+    mounted.push(f.mount({ stage: slot, svg, read }, f.range[1]));
+  });
+}
+function unmountFigures(){ mounted.forEach(m => { try{ m.destroy(); }catch(e){} }); mounted = []; }
+window.hairline = f => { FIGURES[f.name] = f; if(document.querySelector('[data-figure="' + f.name + '"]')) render(); };
+
 // --- Events ----------------------------------------------------------------
 
 function timeToMin(v){ const p = String(v).split(':'); return (+p[0])*60 + (+p[1]); }
 
 document.addEventListener('click', function(e){
-  const t = e.target.closest('[data-tab],[data-go],[data-sid],[data-week],[data-flip],[data-ed],[data-rmex],[data-arch],button,[data-course],[data-pal]');
+  const pop = $('#pop');
+  if(popFor && !pop.contains(e.target) && !e.target.closest('.blk')) closePop();
+  const t = e.target.closest('[data-tab],[data-go],[data-sid],[data-week],[data-ed],[data-rmex],[data-arch],[data-rescue],[data-plan],[data-break],[data-dayall],button,[data-course],[data-pal]');
   if(!t) return;
   const d = t.dataset;
 
   if(d.tab){ view = d.tab; render(); return; }
   if(d.go){ view = d.go; render(); return; }
   if(d.pal){ S.theme = d.pal; save(); applyPalette(d.pal); paintPicker(); return; }
-  if(d.sid){ cycle(d.sid); render(); return; }
-  // A course row. It carried cursor:pointer and a hover nudge from the start
-  // and did nothing at all when clicked; it opens what is left of the course.
+  if(d.sid){ if(popFor === d.sid) closePop(); else openPop(t, d.sid); return; }
+  if(d.mark){
+    const s0 = sessions().find(x => x.id === d.mark);
+    const word = s0 && !isOver(s0) ? {attended:'going', absent:'skipping', cancelled:'cancelled'}[d.to] : MARK_WORD[d.to];
+    if(setMark(d.mark, d.to, 'Marked ' + (s0 ? sessionName(s0) : 'class') + ' ' + word)) render();
+    return;
+  }
+  if(d.dayall){
+    const ids = uncheckedSessions().filter(s => s.date === d.dayall && markOf(s) !== 'cancelled').map(s => s.id);
+    const before = writeMarks(ids, 'attended');
+    if(Object.keys(before).length){ save(); remember('Marked ' + prettyDate(d.dayall) + ' all attended', before); }
+    render(); return;
+  }
+  if(d.plan){
+    const i = S.leavePlan.indexOf(d.plan);
+    if(i >= 0) S.leavePlan.splice(i, 1); else S.leavePlan.push(d.plan);
+    planFocus = d.plan; save(); render(); return;
+  }
+  if(d.break){
+    d.break.split(',').forEach(x => { if(S.leavePlan.indexOf(x) < 0) S.leavePlan.push(x); });
+    planFocus = null; save(); render(); return;
+  }
+  // A course row. The summary line toggles; the panel it opens holds controls
+  // of its own, so the whole article no longer carries the toggle.
   if(d.course !== undefined){
     openCourse = (openCourse === d.course) ? null : d.course;
     refocus = d.course; render(); return;
@@ -1551,13 +2206,47 @@ document.addEventListener('click', function(e){
     S.week = d.week === '0' ? weekMonday(today()) : addDays(mon, d.week === '1' ? 7 : -7);
     save(); render(); return;
   }
-  if(d.flip){ setMark(d.flip, d.to); render(); return; }
-  if(d.mark){ setMark(d.mark, d.to); render(); return; }
   if(d.rmex !== undefined){ S.extras.splice(+d.rmex, 1); save(); render(); return; }
   if(d.ed){ edCycle(d.ed); render(); return; }
   if(d.arch){ try{ download(JSON.parse(localStorage.getItem(d.arch)), d.arch+'.json'); }catch(err){ msg('#bk-msg','That archive could not be read.','err'); } return; }
+  if(d.rescue){ download(localStorage.getItem(d.rescue) || '', d.rescue + '.txt'); return; }
 
   switch(t.id){
+    case 'undo-mark': undo(); return;
+    case 'su-check': view = 'log'; render(); return;
+    case 'su-today': {
+      const was = {countFrom: S.countFrom, reviewedThrough: S.reviewedThrough};
+      const t0 = today();
+      S.countFrom = (t0 > CALENDAR.start && t0 <= CALENDAR.end) ? t0 : S.countFrom;
+      S.reviewedThrough = lastDay();
+      save(); remember('Counting from ' + prettyDate(t0), {}, was); render(); return;
+    }
+    case 'su-all': {
+      const was = {reviewedThrough: S.reviewedThrough};
+      S.reviewedThrough = lastDay();
+      save(); remember('Marked everything before today as checked', {}, was); render(); return;
+    }
+    case 'ck-save': {
+      // Today counts as checked only once its last class is over; otherwise
+      // the check-in stops at yesterday and today's later classes stay due.
+      let thr = t.dataset.through;
+      if(thr >= today() && sessions().some(s => s.date === today() && s.counted && !isOver(s))) thr = lastDay();
+      const was = {reviewedThrough: S.reviewedThrough};
+      S.reviewedThrough = thr;
+      save(); remember('Checked up to ' + prettyDate(thr), {}, was); render(); return;
+    }
+    case 'pl-commit': {
+      const ids = Array.from(planSet(S.leavePlan));
+      const was = {leavePlan: S.leavePlan.slice()};
+      const before = writeMarks(ids, 'absent');
+      S.leavePlan = []; planFocus = null;
+      save(); remember('Marked ' + ids.length + ' planned class' + (ids.length===1?'':'es') + ' as skipping', before, was); render(); return;
+    }
+    case 'pl-clear': {
+      const was = {leavePlan: S.leavePlan.slice()};
+      S.leavePlan = []; planFocus = null;
+      save(); remember('Cleared the leave plan', {}, was); render(); return;
+    }
     case 'ex-add': {
       const code = $('#ex-code').value, date = $('#ex-date').value;
       const st = timeToMin($('#ex-start').value), en = timeToMin($('#ex-end').value);
@@ -1611,10 +2300,12 @@ document.addEventListener('change', function(e){
     S.thresholds[d.thr] = v/100; save(); render(); return;
   }
   if(d.off !== undefined && d.off){
-    const v = e.target.value;
-    if(v === '') delete S.official[d.off]; else S.official[d.off] = Number(v);
+    // Kept as typed, so 27/32 stays a count; parseOfficial() reads it.
+    const v = e.target.value.trim();
+    if(v === '') delete S.official[d.off]; else S.official[d.off] = v;
     save(); render(); return;
   }
+  if(e.target.id === 'lg-course'){ logCourse = e.target.value; render(); return; }
   if(e.target.id === 'cf-date'){
     const v = e.target.value;
     if(!v) return msg('#cf-msg','Pick a date, or use the button to count the whole term.','err');
@@ -1653,7 +2344,10 @@ document.addEventListener('change', function(e){
 
 // "in 40 minutes" is a claim that decays. Re-render the Courses tab once a
 // minute so it can never sit there being wrong by an hour.
-setInterval(() => { if(view === 'courses' && S.courses.length) render(); }, 60000);
+// The Log and Leave tabs depend on the clock too - a class ending moves it
+// from planning to logging - but re-rendering a form under someone mid-edit is
+// worse than a minute's staleness, so only the Overview ticks.
+setInterval(() => { if(view === 'overview' && S.courses.length) render(); }, 60000);
 
 load();
 applyPalette(activePalette());
@@ -1665,8 +2359,817 @@ if('serviceWorker' in navigator && location.protocol.indexOf('http') === 0)
 // Exposed for the verification harness, not for the page. Everything the UI
 // does goes through a real click; these are read-only handles onto the maths.
 window.Atten = { CALENDAR, PALETTES, sessions, stats, stateLine, contactHours, diffAgainst, countFrom, excluded, nextSession, whenLabel,
+                 judgeDays, breaks, planSet, verdict, parseOfficial, uncheckedCount,
                  state: () => S, render, save, blank };
 })();
 </script>
+<!-- ==========================================================================
+     HAIRLINE · the kernel of @lucasmarkes/hairline, unchanged, and two figures
+     drawn on it for the empty states: Seats (no timetable yet) and Keys (no
+     leave planned). Each figure sits in its own function scope, because both
+     destructure the same names from HL. Both passed the skill's look.mjs and
+     validate.mjs before they were pasted here; edit them there, not here.
+     ========================================================================== -->
+<script id="hl-kernel">
+/* hairline kernel sha256:8e2abcbdf63c7755195ee942c39e9c8ea6a539d1147e986dd1c153559121f075 */
+/*
+ * HL: everything a figure may call. Read this index; the code under it is the
+ * package's src/core, unchanged, and a figure should not need to read it.
+ *
+ * Every figure is drawn in a 400 × 320 viewBox. World space is x/y on the
+ * ground and z up. Plates are filled with the ground colour and painted back
+ * to front, so a nearer one covers a farther one: append in that order. At
+ * the default camera, Cam(45, 0.5, S), +x runs down to the right and +y down
+ * to the left, so the corner with the largest x and y is nearest the viewer:
+ * append by ascending x + y, from the far corner (smallest x and y) to it.
+ *
+ * Camera
+ *   Cam(azDeg, k, S)                       a camera: azimuth in degrees, k = sin(elevation) (0.5 is the 2:1 view), S = scale
+ *   fit(C, points, cx, cy)                 centres the box of [x, y, z] points on (cx, cy); call it once, before proj
+ *                                          it only centres, it never scales: choose S by trying values, with the most extreme pose in points.
+ *                                          The six figures use S 1.42 to 2.12; the boxes they fit come out 230 to 310 wide and 180 to 245 tall
+ *   proj(C)                                returns P(x, y, z), which gives [sx, sy]
+ *   unproj(C, sx, sy, z)                   the world [x, y] under a screen point, on the plane at height z
+ *   facing(C)                              returns front(sample): whether a ring sample faces the camera
+ * Rounded solids
+ *   rrect(u0, v0, u1, v1, r, n)            a rounded rectangle, as a ring of samples {u, v, nu, nv}
+ *   circ(R, n)                             a circle, as a ring
+ *   rings(x0, y0, x1, y1, r, b)            [ring, inner]: a rounded footprint and its crease ring, inset by b
+ *                                          r, the corner radius, is cut to half the shorter side. b, the crease's inset in world units
+ *                                          (0.6 to 2.2 in the figures), must stay under half the shorter side or the crease turns inside out
+ *   prism(P, front, ring, inner, z0, z1)   {sil, crease}: a solid standing from z0 to z1, as two path strings
+ *   ringAt(P, ring, z)                     the ring's points, projected at height z
+ *   run(ring, keep)                        the one cyclic run of samples that pass keep
+ *   hull(points)                           the convex hull of screen points
+ *   extremes(P, ring)                      [left, right, nearest] samples: where dashed drops fall from
+ *   fillet(points, radii, n)               rounds every vertex of a closed polygon; returns the new points
+ *                                          radii is an array, one radius per vertex, each cut to half its shorter edge; a single number gives NaN.
+ *                                          n is the steps round each corner, default 4: each vertex becomes n + 1 points
+ *   ghost(P, front, ring, z0, depth)       a reflection's path {d, y0, y1}; reflect() draws it for you
+ * Paths and numbers
+ *   poly(points)                           a closed path string
+ *   open(points)                           an open polyline string
+ *   seg(a, b)                              one segment between two screen points [sx, sy], as its own subpath; project world points with P first
+ *   clamp(v, a, b)
+ *   lerp(a, b, t)
+ *   rad(deg)
+ *   r2(n)                                  two decimals
+ * The continuous clock: one spring per moving number
+ *   spring(x, opts)                        at rest on x; write .t to retarget; opts {k, c, m, eps}, default k 100, c 18, m 1
+ *   stepS(sp, dt)                          advances by dt seconds; returns whether it is still moving
+ * The discrete clock: a 700ms tween on (.32, .72, 0, 1)
+ *   tween(v, dur)                          at rest on v; dur defaults to 700 (ms)
+ *   tset(tw, to, now, delay)               retargets from where it is, after delay ms: the stagger
+ *                                          the same target again does nothing, so calling it on every pointer move is safe
+ *   tval(tw, now)                          its value at now
+ *   tdone(tw, now)                         whether it has landed
+ *   bezier(x1, y1, x2, y2)                 a CSS cubic-bezier, as a function of progress
+ *   EASE_LIFT                              the lift curve itself
+ *   reducedMotion()                        true when the reader asked for less motion; springs and tweens already land at once
+ *   setReducedMotion(on)                   the loop's business, not a figure's
+ * Drawing
+ *   mk(tag, attrs, parent)                 one svg element: the only way a figure makes a node
+ *   solid(parent)                          {g, sil, cr}: a group holding a silhouette path and a crease path
+ *   put(solid, paths)                      writes prism()'s {sil, crease} into solid()'s {sil, cr}: sil into sil, crease into cr
+ *   flatDot(parent, C, r, cls)             a dot lying on the ground plane; cls is "dot", "dot m" or "dot off"
+ *   place(el, point)                       moves a dot or a circle to [sx, sy]
+ *   reflect(svg, parent, P, front, ring, z0, depth)   a fading mirror under a solid
+ *   fade(svg, y0, y1, a0)                  a vertical fade, as a mask; returns the value for a mask attribute
+ * Life
+ *   register(stage, tick)                  joins the one frame loop; tick(dt in seconds, now in ms) returns true to ask for another frame; gives {wake, unregister}
+ *   pointer(stage, handlers)               {move(point), down(point), leave()}, points in viewBox units; returns its disposer
+ *   disposer()                             {add, on, dispose}: collects tear-down, so destroy is bag.dispose
+ * The bench's business, not a figure's
+ *   css(lightDark)
+ *   inject(root)
+ *
+ * Classes, on path, polygon, ellipse and line. They are the whole palette; a
+ * figure sets no colour, width or fill of its own.
+ *     (none)   filled with the ground colour, medium stroke
+ *     sil      the silhouette's stroke        hi    the bright stroke: the only highlight
+ *     lo       the dim stroke                 nf    no fill        fo   fill only, no stroke
+ *     dash     a dashed guide
+ *     dot      a bright dot                   dot m   a medium dot     dot off   a dim dot
+ */
+var HL = (() => {
+  var __defProp = Object.defineProperty;
+  var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+  var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __export = (target, all) => {
+    for (var name in all)
+      __defProp(target, name, { get: all[name], enumerable: true });
+  };
+  var __copyProps = (to, from, except, desc) => {
+    if (from && typeof from === "object" || typeof from === "function") {
+      for (let key of __getOwnPropNames(from))
+        if (!__hasOwnProp.call(to, key) && key !== except)
+          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+    }
+    return to;
+  };
+  var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
+  // packages/hairline/src/core/kernel.ts
+  var kernel_exports = {};
+  __export(kernel_exports, {
+    Cam: () => Cam,
+    EASE_LIFT: () => EASE_LIFT,
+    bezier: () => bezier,
+    circ: () => circ,
+    clamp: () => clamp,
+    css: () => css,
+    disposer: () => disposer,
+    extremes: () => extremes,
+    facing: () => facing,
+    fade: () => fade,
+    fillet: () => fillet,
+    fit: () => fit,
+    flatDot: () => flatDot,
+    ghost: () => ghost,
+    hull: () => hull,
+    inject: () => inject,
+    lerp: () => lerp,
+    mk: () => mk,
+    open: () => open,
+    place: () => place,
+    pointer: () => pointer,
+    poly: () => poly,
+    prism: () => prism,
+    proj: () => proj,
+    put: () => put,
+    r2: () => r2,
+    rad: () => rad,
+    reducedMotion: () => reducedMotion,
+    reflect: () => reflect,
+    register: () => register,
+    ringAt: () => ringAt,
+    rings: () => rings,
+    rrect: () => rrect,
+    run: () => run,
+    seg: () => seg,
+    setReducedMotion: () => setReducedMotion,
+    solid: () => solid,
+    spring: () => spring,
+    stepS: () => stepS,
+    tdone: () => tdone,
+    tset: () => tset,
+    tval: () => tval,
+    tween: () => tween,
+    unproj: () => unproj
+  });
+
+  // packages/hairline/src/core/iso.ts
+  var clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  var lerp = (a, b, t) => a + (b - a) * t;
+  var rad = (d) => d * Math.PI / 180;
+  var r2 = (n) => Math.round(n * 100) / 100;
+  var poly = (pts) => "M" + pts.map((p) => r2(p[0]) + " " + r2(p[1])).join("L") + "Z";
+  var seg = (a, b) => `M${r2(a[0])} ${r2(a[1])}L${r2(b[0])} ${r2(b[1])}`;
+  var open = (pts) => pts.length < 2 ? "" : "M" + pts.map((p) => r2(p[0]) + " " + r2(p[1])).join("L");
+  var Cam = (azDeg, k, S) => ({ az: rad(azDeg), k, S, ox: 0, oy: 0 });
+  function proj(C) {
+    const c = Math.cos(C.az), s = Math.sin(C.az), zf = Math.sqrt(1 - C.k * C.k);
+    return (x, y, z) => {
+      const X = x * c - y * s, Y = x * s + y * c;
+      return [C.ox + C.S * X, C.oy + C.S * (Y * C.k - z * zf)];
+    };
+  }
+  function unproj(C, sx, sy, z) {
+    const c = Math.cos(C.az), s = Math.sin(C.az), zf = Math.sqrt(1 - C.k * C.k);
+    const X = (sx - C.ox) / C.S, Y = ((sy - C.oy) / C.S + z * zf) / C.k;
+    return [X * c + Y * s, -X * s + Y * c];
+  }
+  function fit(C, pts, cx, cy) {
+    C.ox = 0;
+    C.oy = 0;
+    const P = proj(C);
+    let a = 1e9, b = -1e9, c = 1e9, d = -1e9;
+    for (const p of pts) {
+      const q = P(p[0], p[1], p[2]);
+      a = Math.min(a, q[0]);
+      b = Math.max(b, q[0]);
+      c = Math.min(c, q[1]);
+      d = Math.max(d, q[1]);
+    }
+    C.ox = cx - (a + b) / 2;
+    C.oy = cy - (c + d) / 2;
+  }
+  function rrect(u0, v0, u1, v1, r, n = 4) {
+    r = Math.max(0, Math.min(r, (u1 - u0) / 2, (v1 - v0) / 2));
+    const out = [];
+    for (const [cu, cv, a0] of [[u1 - r, v1 - r, 0], [u0 + r, v1 - r, 90], [u0 + r, v0 + r, 180], [u1 - r, v0 + r, 270]])
+      for (let k = 0; k <= n; k++) {
+        const a = rad(a0 + 90 * k / n), ca = Math.cos(a), sa = Math.sin(a);
+        out.push({ u: cu + r * ca, v: cv + r * sa, nu: ca, nv: sa });
+      }
+    return out;
+  }
+  function circ(R, n = 96) {
+    const out = [];
+    for (let k = 0; k < n; k++) {
+      const a = k / n * Math.PI * 2, ca = Math.cos(a), sa = Math.sin(a);
+      out.push({ u: R * ca, v: R * sa, nu: ca, nv: sa });
+    }
+    return out;
+  }
+  function hull(input) {
+    const pts = input.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+    const x = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+    const lo = [], up = [];
+    for (const p of pts) {
+      while (lo.length > 1 && x(lo[lo.length - 2], lo[lo.length - 1], p) <= 0) lo.pop();
+      lo.push(p);
+    }
+    for (let i = pts.length - 1; i >= 0; i--) {
+      const p = pts[i];
+      while (up.length > 1 && x(up[up.length - 2], up[up.length - 1], p) <= 0) up.pop();
+      up.push(p);
+    }
+    lo.pop();
+    up.pop();
+    return lo.concat(up);
+  }
+  var ringAt = (P, ring, z) => ring.map((q) => P(q.u, q.v, z));
+  var facing = (C) => {
+    const s = Math.sin(C.az), c = Math.cos(C.az);
+    return (q) => q.nu * s + q.nv * c >= -1e-6;
+  };
+  function run(ring, keep) {
+    const n = ring.length;
+    let s = -1;
+    for (let i = 0; i < n; i++) if (keep(ring[i]) && !keep(ring[(i + n - 1) % n])) {
+      s = i;
+      break;
+    }
+    if (s < 0) return keep(ring[0]) ? ring.slice() : [];
+    const out = [];
+    for (let k = 0; k < n && keep(ring[(s + k) % n]); k++) out.push(ring[(s + k) % n]);
+    return out;
+  }
+  function prism(P, front, ring, inner, z0, z1) {
+    return {
+      sil: poly(hull(ringAt(P, ring, z1).concat(ringAt(P, ring, z0)))),
+      crease: inner ? open(ringAt(P, run(inner, front), z1)) : ""
+    };
+  }
+  var rings = (x0, y0, x1, y1, r, b) => [
+    rrect(x0, y0, x1, y1, r),
+    rrect(x0 + b, y0 + b, x1 - b, y1 - b, Math.max(0.3, r - b))
+  ];
+  function extremes(P, ring) {
+    const pr = ring.map((q) => P(q.u, q.v, 0));
+    let a = 0, b = 0, c = 0;
+    pr.forEach((p, k) => {
+      if (p[0] < pr[a][0]) a = k;
+      if (p[0] > pr[b][0]) b = k;
+      if (p[1] > pr[c][1]) c = k;
+    });
+    return [ring[a], ring[b], ring[c]];
+  }
+  function fillet(pts, rs, n = 4) {
+    const m = pts.length, out = [];
+    for (let i = 0; i < m; i++) {
+      const a = pts[(i + m - 1) % m], p = pts[i], b = pts[(i + 1) % m];
+      const la = Math.hypot(a[0] - p[0], a[1] - p[1]), lb = Math.hypot(b[0] - p[0], b[1] - p[1]);
+      const t = Math.min(rs[i], la / 2, lb / 2);
+      const p1 = [p[0] + (a[0] - p[0]) / la * t, p[1] + (a[1] - p[1]) / la * t];
+      const p2 = [p[0] + (b[0] - p[0]) / lb * t, p[1] + (b[1] - p[1]) / lb * t];
+      for (let k = 0; k <= n; k++) {
+        const s = k / n, w = 1 - s;
+        out.push([w * w * p1[0] + 2 * w * s * p[0] + s * s * p2[0], w * w * p1[1] + 2 * w * s * p[1] + s * s * p2[1]]);
+      }
+    }
+    return out;
+  }
+  function ghost(P, front, ring, z0, depth) {
+    const f = run(ring, front), lowP = ringAt(P, f, z0 - depth);
+    return {
+      d: open(lowP) + [f[0], f[f.length - 1]].map((q) => seg(P(q.u, q.v, z0), P(q.u, q.v, z0 - depth))).join(""),
+      y0: Math.min(...ringAt(P, f, z0).map((p) => p[1])),
+      y1: Math.max(...lowP.map((p) => p[1])) + 2
+    };
+  }
+
+  // packages/hairline/src/core/motion.ts
+  var reduced = false;
+  var setReducedMotion = (on) => {
+    reduced = on;
+  };
+  var reducedMotion = () => reduced;
+  function spring(x, o = {}) {
+    return { x, v: 0, t: x, k: o.k ?? 100, c: o.c ?? 18, m: o.m ?? 1, eps: o.eps ?? 0.01 };
+  }
+  function stepS(sp, dt) {
+    if (reduced) {
+      sp.x = sp.t;
+      sp.v = 0;
+      return false;
+    }
+    const n = Math.max(1, Math.ceil(dt * 240)), h = dt / n;
+    for (let i = 0; i < n; i++) {
+      const a = (-sp.k * (sp.x - sp.t) - sp.c * sp.v) / sp.m;
+      sp.v += a * h;
+      sp.x += sp.v * h;
+    }
+    if (Math.abs(sp.x - sp.t) < sp.eps && Math.abs(sp.v) < sp.eps * 10) {
+      sp.x = sp.t;
+      sp.v = 0;
+      return false;
+    }
+    return true;
+  }
+  function bezier(x1, y1, x2, y2) {
+    const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
+    const cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+    const X = (u) => ((ax * u + bx) * u + cx) * u;
+    const Y = (u) => ((ay * u + by) * u + cy) * u;
+    const dX = (u) => (3 * ax * u + 2 * bx) * u + cx;
+    return (t) => {
+      if (t <= 0) return 0;
+      if (t >= 1) return 1;
+      let u = t;
+      for (let i = 0; i < 8; i++) {
+        const e = X(u) - t;
+        if (Math.abs(e) < 1e-5) break;
+        const d = dX(u);
+        if (Math.abs(d) < 1e-6) break;
+        u -= e / d;
+      }
+      if (!(u >= 0 && u <= 1) || Math.abs(X(u) - t) > 1e-4) {
+        let lo = 0, hi = 1;
+        u = t;
+        for (let i = 0; i < 24; i++) {
+          if (X(u) < t) lo = u;
+          else hi = u;
+          u = (lo + hi) / 2;
+        }
+      }
+      return Y(u);
+    };
+  }
+  var EASE_LIFT = bezier(0.32, 0.72, 0, 1);
+  var tween = (v, dur = 700) => ({ from: v, to: v, t0: -1e9, dur });
+  var tval = (tw, now) => {
+    const p = clamp((now - tw.t0) / tw.dur, 0, 1);
+    return tw.from + (tw.to - tw.from) * (reduced ? 1 : EASE_LIFT(p));
+  };
+  var tset = (tw, to, now, delay) => {
+    if (tw.to === to) return;
+    tw.from = tval(tw, now);
+    tw.to = to;
+    tw.t0 = now + delay;
+  };
+  var tdone = (tw, now) => reduced || now >= tw.t0 + tw.dur;
+
+  // packages/hairline/src/core/stage.ts
+  var NS = "http://www.w3.org/2000/svg";
+  function mk(tag, attrs, parent) {
+    const e = document.createElementNS(NS, tag);
+    if (attrs) for (const k in attrs) e.setAttribute(k, String(attrs[k]));
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function solid(parent) {
+    const g = mk("g", {}, parent);
+    return { g, sil: mk("path", { class: "sil" }, g), cr: mk("path", { class: "nf lo" }, g) };
+  }
+  var put = (el, s) => {
+    el.sil.setAttribute("d", s.sil);
+    el.cr.setAttribute("d", s.crease);
+  };
+  var flatDot = (parent, C, r, cls) => mk("ellipse", { rx: r2(r * C.S), ry: r2(r * C.S * C.k), class: cls }, parent);
+  var place = (el, q) => {
+    el.setAttribute("cx", String(r2(q[0])));
+    el.setAttribute("cy", String(r2(q[1])));
+  };
+  var fid = 0;
+  function fade(svg, y0, y1, a0 = 0.7) {
+    const id = "hl-fd" + ++fid, defs = mk("defs", {}, svg);
+    const lg = mk("linearGradient", { id: id + "g", gradientUnits: "userSpaceOnUse", x1: 0, y1: r2(y0), x2: 0, y2: r2(y1) }, defs);
+    mk("stop", { offset: 0, "stop-color": "#fff", "stop-opacity": a0 }, lg);
+    mk("stop", { offset: 1, "stop-color": "#fff", "stop-opacity": 0 }, lg);
+    const m = mk("mask", { id, maskUnits: "userSpaceOnUse", x: 0, y: 0, width: 400, height: 320 }, defs);
+    mk("rect", { x: 0, y: 0, width: 400, height: 320, fill: `url(#${id}g)` }, m);
+    return `url(#${id})`;
+  }
+  function reflect(svg, parent, P, front, ring, z0, depth) {
+    const r = ghost(P, front, ring, z0, depth);
+    const gh = mk("g", { class: "ghost", mask: fade(svg, r.y0, r.y1) }, parent);
+    mk("path", { d: r.d }, gh);
+  }
+  var boards = [];
+  var byStage = /* @__PURE__ */ new Map();
+  var raf = 0;
+  var last = 0;
+  var io = null;
+  var rm = null;
+  function frame(now) {
+    const dt = Math.min(0.05, Math.max(0, (now - last) / 1e3));
+    last = now;
+    let any = false;
+    for (const b of boards.slice()) if (b.vis && b.awake) {
+      b.awake = !!b.tick(dt, now);
+      any = any || b.awake;
+    }
+    raf = any ? requestAnimationFrame(frame) : 0;
+  }
+  function wake(b) {
+    b.awake = true;
+    if (!raf) {
+      last = performance.now();
+      raf = requestAnimationFrame(frame);
+    }
+  }
+  var onMotion = () => {
+    setReducedMotion(!!rm?.matches);
+    boards.forEach(wake);
+  };
+  function start() {
+    if (io) return;
+    io = new IntersectionObserver((es) => {
+      for (const e of es) {
+        const b = byStage.get(e.target);
+        if (!b) continue;
+        b.vis = e.isIntersecting;
+        if (b.vis) wake(b);
+      }
+    }, { rootMargin: "80px" });
+    rm = matchMedia("(prefers-reduced-motion: reduce)");
+    setReducedMotion(rm.matches);
+    rm.addEventListener("change", onMotion);
+  }
+  function stop() {
+    if (raf) cancelAnimationFrame(raf);
+    raf = 0;
+    io?.disconnect();
+    io = null;
+    rm?.removeEventListener("change", onMotion);
+    rm = null;
+  }
+  function register(stage, tick) {
+    start();
+    const b = { stage, tick, vis: false, awake: true };
+    boards.push(b);
+    byStage.set(stage, b);
+    io.observe(stage);
+    tick(0, performance.now());
+    let gone = false;
+    return {
+      wake: () => {
+        if (!gone) wake(b);
+      },
+      unregister: () => {
+        if (gone) return;
+        gone = true;
+        boards = boards.filter((x) => x !== b);
+        if (byStage.get(stage) === b) {
+          byStage.delete(stage);
+          io?.unobserve(stage);
+        }
+        if (!boards.length) stop();
+      }
+    };
+  }
+  function pointer(stage, on) {
+    let tm = 0;
+    const pt = (e) => {
+      const r = stage.getBoundingClientRect();
+      return [(e.clientX - r.left) / r.width * 400, (e.clientY - r.top) / r.height * 320];
+    };
+    const move = (e) => {
+      clearTimeout(tm);
+      on.move(pt(e), e);
+    };
+    const down = (e) => {
+      clearTimeout(tm);
+      if (e.pointerType !== "mouse") stage.releasePointerCapture?.(e.pointerId);
+      if (on.down) on.down(pt(e), e);
+      else on.move(pt(e), e);
+    };
+    const leave = (e) => {
+      clearTimeout(tm);
+      tm = window.setTimeout(() => on.leave(e), e.pointerType === "mouse" ? 0 : 1400);
+    };
+    stage.addEventListener("pointermove", move);
+    stage.addEventListener("pointerdown", down);
+    stage.addEventListener("pointerleave", leave);
+    return () => {
+      clearTimeout(tm);
+      stage.removeEventListener("pointermove", move);
+      stage.removeEventListener("pointerdown", down);
+      stage.removeEventListener("pointerleave", leave);
+    };
+  }
+  function disposer() {
+    let fns = [];
+    return {
+      add: (fn) => {
+        fns.push(fn);
+      },
+      on: (target, type, fn, opts) => {
+        const h = fn;
+        target.addEventListener(type, h, opts);
+        fns.push(() => target.removeEventListener(type, h, opts));
+      },
+      dispose: () => {
+        const run2 = fns;
+        fns = [];
+        for (let i = run2.length - 1; i >= 0; i--) run2[i]();
+      }
+    };
+  }
+
+  // packages/hairline/src/core/styles.ts
+  var LIGHT = { plate: "#ffffff", hi: "#232327", edge: "#a4a4ac", mid: "#c3c3c9", lo: "#e0e0e4" };
+  var DARK = { plate: "#08090a", hi: "#d0d6e0", edge: "#5b5d64", mid: "#3e3e44", lo: "#29292d" };
+  var KEYS = ["plate", "hi", "edge", "mid", "lo"];
+  var vars = (p) => KEYS.map((k) => `--hl-${k}:var(--hairline-${k},${p[k]});`).join("");
+  var EASE = "cubic-bezier(0.5,0,0.1,1)";
+  var SVG = ":where([data-hairline]>svg)";
+  function css(lightDark) {
+    const both = Object.fromEntries(KEYS.map((k) => [k, `light-dark(${LIGHT[k]},${DARK[k]})`]));
+    return [
+      // the box, and the palette: light unless something below says otherwise
+      `:where([data-hairline]){display:block;position:relative;aspect-ratio:5/4;touch-action:pan-y;user-select:none;-webkit-user-select:none;--hl-sw:var(--hairline-stroke,0.9);${vars(LIGHT)}}`,
+      // the page's color-scheme
+      lightDark ? `:where([data-hairline]){${vars(both)}}` : "",
+      // an ancestor that says dark
+      `:where(.dark,[data-theme="dark"]) :where([data-hairline]){${vars(DARK)}}`,
+      // the figure's own theme option
+      `:where([data-hairline][data-hairline-theme="light"]){${vars(LIGHT)}}`,
+      `:where([data-hairline][data-hairline-theme="dark"]){${vars(DARK)}}`,
+      `:where([data-hairline]:focus-visible){outline:1.5px solid var(--hl-hi);outline-offset:2px}`,
+      `${SVG}{position:absolute;inset:0;width:100%;height:100%;display:block}`,
+      // Riffle's live region: read, not seen
+      `:where([data-hairline]>[data-hairline-live]){position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}`,
+      // the drawing: plates are filled with the plate colour and painted back to front
+      `${SVG} :where(path,polygon,ellipse,line){fill:var(--hl-plate);stroke:var(--hl-mid);stroke-width:var(--hl-sw);vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round;transition:stroke 260ms ${EASE}}`,
+      `${SVG} :where(.nf){fill:none}`,
+      `${SVG} :where(.fo){stroke:none}`,
+      `${SVG} :where(.sil){stroke:var(--hl-edge)}`,
+      `${SVG} :where(.hi){stroke:var(--hl-hi)}`,
+      `${SVG} :where(.lo){stroke:var(--hl-lo)}`,
+      `${SVG} :where(.dash){stroke-dasharray:1 3}`,
+      `${SVG} :where(.dot){stroke:none;fill:var(--hl-hi);transition:fill 260ms ${EASE}}`,
+      `${SVG} :where(.dot.m){fill:var(--hl-edge)}`,
+      `${SVG} :where(.dot.off){fill:var(--hl-lo)}`,
+      `${SVG} :where(.ghost path){fill:none;stroke:var(--hl-mid)}`
+    ].join("");
+  }
+  var done = /* @__PURE__ */ new WeakSet();
+  function inject(root) {
+    if (done.has(root)) return;
+    done.add(root);
+    const doc = root.nodeType === 9 ? root : root.ownerDocument;
+    const win = doc.defaultView;
+    const text = css(!!win?.CSS?.supports?.("color", "light-dark(#000,#fff)"));
+    if (win && "adoptedStyleSheets" in root) {
+      try {
+        const sheet = new win.CSSStyleSheet();
+        sheet.replaceSync(text);
+        root.adoptedStyleSheets = [...root.adoptedStyleSheets, sheet];
+        return;
+      } catch {
+      }
+    }
+    const style = doc.createElement("style");
+    style.setAttribute("data-hairline-style", "");
+    style.textContent = text;
+    (root.nodeType === 9 ? doc.head ?? doc.documentElement : root).appendChild(style);
+  }
+  return __toCommonJS(kernel_exports);
+})();
+/* /hairline kernel */
+
+</script>
+<script id="hl-seats">(() => {
+/**
+ * Seats: a lecture hall of three stepped tiers, five fold-up seats on each,
+ * every seat empty and folded up. The pointer folds down the seat nearest it,
+ * and its neighbours fold less the further they sit, each on its own spring.
+ * At rest one seat in the front row has been left half down, and it carries
+ * the bright edge. The slider is the reach, in seats.
+ *
+ * The pattern: a field over discrete parts at different heights. Picking is
+ * by each seat's rest centre on screen, which never moves, so a seat folding
+ * out from under the pointer cannot change the choice.
+ */
+const {
+  Cam, clamp, facing, fillet, fit, poly, prism, proj, rings, seg, spring, stepS,
+  mk, pointer, put, register, disposer, solid,
+} = HL;
+
+const NR = 3, NS = 5, PITCH = 18, SW = 14, D = 26, RISE = 10;
+const BH = 25, SH = 10, L = 14, X0 = -6, X1 = NS * PITCH + 2;
+const PICK = 24;                               // viewBox units: further than this from every seat is rest
+// Rest angles in degrees, 90 is folded up. Not all alike: an empty hall's
+// seats never sit quite square. Front row, middle seat: left half down.
+const REST = [[90, 84, 90, 88, 90], [88, 90, 86, 90, 90], [90, 90, 58, 90, 82]];
+const MARK = [2, 2];                            // [row, seat] of the seat left down
+
+const zt = (r) => (NR - r) * RISE;               // tier top: the back row (r 0) stands highest
+const falloff = (u) => (u >= 1 ? 0 : (1 - u) ** 1.6);
+const backShape = fillet([[0, 0], [SW, 0], [SW, BH], [0, BH]], [1.2, 1.2, 4, 4]);
+const seatShape = fillet([[0, 0], [SW, 0], [SW, L], [0, L]], [1.2, 1.2, 3, 3]);
+
+function mount({ stage, svg, read }, value) {
+  const bag = disposer();
+  let R = value;
+  const C = Cam(45, 0.5, 1.86);
+  fit(C, [[X0, 0, 0], [X1, NR * D, 0], [X1, 0, 0], [X0, NR * D, 0], [X0, 0, zt(0) + BH], [X1, 0, zt(0) + BH]], 200, 166);
+  const P = proj(C), front = facing(C);
+
+  const g = mk("g", {}, svg), seats = [];
+  for (let r = 0; r < NR; r++) {
+    // the riser this row stands on, painted after the row behind it
+    const [ring, inner] = rings(X0, r * D, X1, (r + 1) * D, 3, 1.4);
+    put(solid(g), prism(P, front, ring, inner, 0, zt(r)));
+    for (let s = 0; s < NS; s++) {
+      const x0 = s * PITCH, yb = r * D + 6, z0 = zt(r);
+      const el = mk("g", {}, g);
+      // the back, with a second line for its thickness, then the pedestal, then the seat
+      mk("path", { class: "lo", d: poly(backShape.map(([u, v]) => P(x0 + u, yb - 1.6, z0 + v))) }, el);
+      mk("path", { class: "sil", d: poly(backShape.map(([u, v]) => P(x0 + u, yb, z0 + v))) }, el);
+      mk("path", { class: "nf lo", d: seg(P(x0 + SW / 2, yb + 2, z0), P(x0 + SW / 2, yb + 2, z0 + SH)) }, el);
+      const seat = mk("path", { class: "sil" }, el);
+      const rest = REST[r][s];
+      seats.push({ r, s, x0, yb, z0, rest, seat, sp: spring(rest, { eps: 0.2 }), drawn: NaN,
+                   c: P(x0 + SW / 2, yb, z0 + BH * 0.55) });
+    }
+  }
+
+  function drawSeat(q) {
+    const a = clamp(q.sp.x, 0, 90);
+    if (a === q.drawn) return;
+    q.drawn = a;
+    const co = Math.cos((a * Math.PI) / 180), si = Math.sin((a * Math.PI) / 180), yh = q.yb + 2, zh = q.z0 + SH;
+    q.seat.setAttribute("d", poly(seatShape.map(([u, v]) => P(q.x0 + u, yh + v * co, zh + v * si))));
+  }
+
+  const B = register(stage, (dt) => {
+    let m = false;
+    for (const q of seats) { if (stepS(q.sp, dt)) m = true; drawSeat(q); }
+    return m;
+  });
+  bag.add(B.unregister);
+
+  let over = null;
+  const mark = seats.find((q) => q.r === MARK[0] && q.s === MARK[1]);
+  function retarget() {
+    for (const q of seats) {
+      if (!over) { q.sp.t = q.rest; continue; }
+      const u = Math.hypot(q.s - over.s, (q.r - over.r) * 1.3) / R;
+      q.sp.t = q.rest - q.rest * falloff(u);
+    }
+    const lit = over || mark;
+    seats.forEach((q) => q.seat.classList.toggle("hi", q === lit));
+    read.textContent = over ? `row ${NR - over.r} · seat ${over.s + 1} · 0` : "rest";
+    B.wake();
+  }
+  retarget();
+
+  /** The seat whose rest centre is nearest the pointer, or none past PICK. */
+  function pick([x, y]) {
+    let best = null, bd = PICK;
+    for (const q of seats) { const d = Math.hypot(q.c[0] - x, q.c[1] - y); if (d < bd) { bd = d; best = q; } }
+    return best;
+  }
+  bag.add(pointer(stage, {
+    move: (p) => { const q = pick(p); if (q !== over) { over = q; retarget(); } },
+    leave: () => { over = null; retarget(); },
+  }));
+  bag.add(() => svg.replaceChildren());
+
+  return { set: (v) => { R = v; if (over) retarget(); }, destroy: bag.dispose };
+}
+
+hairline({
+  name: "seats",
+  means: "A lecture hall of empty fold-up seats: the one nearest the pointer folds down, its neighbours less.",
+  rules: [1, 3, 5, 9],
+  range: [1.2, 2.4, 3.4],
+  mount,
+});
+
+})();</script>
+<script id="hl-keys">(() => {
+/**
+ * Keys: a board on the wall with a rail of seven hooks, a key on every one -
+ * none taken. The pointer tips the key under it out from the board, and its
+ * neighbours swing less the further they hang, each on its own spring. At rest
+ * one key hangs a little askew and carries the bright edge. The slider is the
+ * reach, in keys.
+ *
+ * The pattern: a field over one row of parts. Picking is by each key's rest
+ * centre on screen x, which never moves, so a key swinging out from under the
+ * pointer cannot change the choice.
+ */
+const {
+  Cam, circ, clamp, facing, fillet, fit, poly, prism, proj, rings, seg, spring, stepS,
+  mk, pointer, put, register, disposer, solid,
+} = HL;
+
+const N = 7, PITCH = 16, BW = N * PITCH + 12, BHT = 92, BT = 4, RAIL = 74, SWING = 62;
+// Each key: its blade length and the depths of its teeth. Different keys, so
+// the rack reads as a set of real ones rather than a pattern.
+const KEYS = [[30, [2, 4, 1, 3]], [24, [3, 1, 3]], [34, [1, 3, 4, 2, 3]], [27, [4, 2, 2]], [31, [2, 2, 4, 1]], [23, [3, 4]], [29, [1, 4, 2, 3]]];
+const REST = [0, 3, 0, 9, 0, 2, 0];              // degrees out from the board; one hangs askew
+const MARK = 3;
+const falloff = (u) => (u >= 1 ? 0 : (1 - u) ** 1.4);
+
+/** A key's outline in its own plane: u across, v down from the hook. A rounded bow, then a blade with its teeth cut along the right edge. */
+function keyShape(len, teeth) {
+  const E = 1.8, top = 12, end = top + len, pts = [[-5, 0], [5, 0], [5, top], [E, top]];
+  const step = (len - 6) / teeth.length;
+  teeth.forEach((d, k) => {
+    const c = top + 3 + step * (k + 0.5);
+    pts.push([E, c - step * 0.45], [E + d, c - step * 0.2], [E + d, c + step * 0.2], [E, c + step * 0.45]);
+  });
+  pts.push([E, end - 1], [0, end + 1.5], [-E, end - 1], [-E, top], [-5, top]);
+  const radii = pts.map((_, i) => (i < 3 || i === pts.length - 1 ? 2.4 : i === pts.length - 4 ? 1 : 0.3));
+  return fillet(pts, radii);
+}
+
+function mount({ stage, svg, read }, value) {
+  const bag = disposer();
+  let R = value;
+  const C = Cam(45, 0.5, 1.9);
+  fit(C, [[-6, -BT, 0], [BW - 6, -BT, 0], [-6, 0, BHT], [BW - 6, 0, BHT], [BW - 6, 40, RAIL - 40], [-6, 40, RAIL - 40]], 200, 166);
+  const P = proj(C), front = facing(C);
+
+  const g = mk("g", {}, svg);
+  // the board, standing on its edge against the wall, then the rail across it
+  const board = fillet([[-6, 0], [BW - 6, 0], [BW - 6, BHT], [-6, BHT]], [3, 3, 8, 8]);
+  mk("path", { class: "lo", d: poly(board.map(([x, z]) => P(x, -BT, z))) }, g);
+  mk("path", { class: "sil", d: poly(board.map(([x, z]) => P(x, 0, z))) }, g);
+  const [rr, ri] = rings(-2, 0, BW - 10, 5, 2.4, 1);
+  put(solid(g), prism(P, front, rr, ri, RAIL, RAIL + 6));
+
+  const keys = KEYS.map(([len, teeth], i) => {
+    const hx = 4 + i * PITCH, el = mk("g", {}, g);
+    mk("path", { class: "nf", d: seg(P(hx, 5, RAIL + 2), P(hx, 9, RAIL + 3)) }, el);        // the hook
+    const body = mk("path", { class: "sil" }, el);
+    const hole = mk("path", { class: "nf lo" }, el);
+    return { i, hx, len, el, shape: keyShape(len, teeth), body, hole, sp: spring(REST[i], { eps: 0.15 }), drawn: NaN, cx: P(hx, 7, RAIL - 6 - len / 2)[0] };
+  });
+  const ring = circ(1.6, 10).map((q) => [q.u, q.v + 6]);
+
+  function drawKey(k) {
+    const a = clamp(k.sp.x, 0, SWING);
+    if (a === k.drawn) return;
+    k.drawn = a;
+    const co = Math.cos((a * Math.PI) / 180), si = Math.sin((a * Math.PI) / 180);
+    const w = ([u, v]) => P(k.hx + u, 7 + v * si, RAIL + 1 - v * co);
+    k.body.setAttribute("d", poly(k.shape.map(w)));
+    k.hole.setAttribute("d", poly(ring.map(w)));
+  }
+  // A key swung out comes toward the viewer, so it can pass in front of the
+  // key beside it: keep the groups painted by depth, moving them, never redrawing.
+  let order = keys.map((k) => k.i).join();
+  function sortKeys() {
+    const by = keys.slice().sort((p, q) => p.hx + p.len * 0.5 * Math.sin((p.drawn * Math.PI) / 180) - (q.hx + q.len * 0.5 * Math.sin((q.drawn * Math.PI) / 180)));
+    const now = by.map((k) => k.i).join();
+    if (now !== order) { order = now; by.forEach((k) => g.append(k.el)); }
+  }
+  const B = register(stage, (dt) => {
+    let m = false;
+    for (const k of keys) { if (stepS(k.sp, dt)) m = true; drawKey(k); }
+    sortKeys();
+    return m;
+  });
+  bag.add(B.unregister);
+
+  let over = -1;
+  function retarget() {
+    keys.forEach((k) => { k.sp.t = over < 0 ? REST[k.i] : Math.max(REST[k.i], SWING * falloff(Math.abs(k.i - over) / R)); });
+    const lit = over < 0 ? MARK : over;
+    keys.forEach((k) => k.body.classList.toggle("hi", k.i === lit));
+    read.textContent = over < 0 ? "rest" : `hook ${over + 1} · 0 taken`;
+    B.wake();
+  }
+  retarget();
+  const left = keys[0].cx - PITCH, right = keys[N - 1].cx + PITCH;
+  bag.add(pointer(stage, {
+    move: ([x]) => {
+      let o = -1;
+      if (x > left && x < right) o = keys.reduce((b, k) => (Math.abs(k.cx - x) < Math.abs(keys[b].cx - x) ? k.i : b), 0);
+      if (o !== over) { over = o; retarget(); }
+    },
+    leave: () => { over = -1; retarget(); },
+  }));
+  bag.add(() => svg.replaceChildren());
+  return { set: (v) => { R = v; if (over >= 0) retarget(); }, destroy: bag.dispose };
+}
+
+hairline({
+  name: "keys",
+  means: "A rack of keys with none taken: the key under the pointer tips out from the board, its neighbours less.",
+  rules: [1, 3, 5, 9],
+  range: [1, 2, 3.5],
+  mount,
+});
+
+})();</script>
 </body>
 </html>

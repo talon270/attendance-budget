@@ -22,7 +22,8 @@ xdg-open index.html
 ```
 
 Then: Bob the Builder → the plan you are actually enrolled in → **Export for
-attendance** → the Data tab here → load the file.
+attendance** → Settings here → load the file. Then answer the one question
+the Overview asks — how much of the past you actually have records for.
 
 Deployment is GitHub Pages serving this repository's root — there is no build
 step, no bundler and no generated directory, so what is in the repo is exactly
@@ -33,34 +34,84 @@ deploy .` puts it on Cloudflare with no changes.
 
 | Tab | What it does |
 |---|---|
-| Courses | Opens on the next class, its course's current percentage, and what skipping it costs. Then every course, its percentage drawn against its own bar, expandable to what is still to come. A rail carries term progress, the next seven days, **Start counting from**, and the per-course bar |
-| Week | The timetable as a grid. Click a class to cycle it attended → absent → cancelled. Add a make-up class from the form underneath |
-| Reconcile | Type what the official record says; the app reports the gap and lists sessions you could flip. It never flips one itself |
-| Calendar | Author the semester — term dates, holidays, and the days that run another day's timetable — and copy the constant back into this file |
-| Data | Import (as a diff), undo the last import, backup, restore, clear |
+| Overview | Opens on the next class, its course's percentage, and what skipping it costs. Under it, one compact row per course — attended with its bar, leave in classes then hours, missed so far, next class — each opening to that course's whole term. A rail carries term progress, the next seven days and the per-course bar |
+| Log | **Check in**: the oldest unchecked week of held classes, one tap per class and "All attended" per day. **Fix one course**: every class of the term, newest first. **Reconcile** against the official record as `84.4` or `27/32`. **Start counting from** |
+| Leave | A live calendar from today to term end. Click class days to plan them off; every other day re-judges itself against the plan. Per-course leave before and after, **Breaks you can afford**, and one button that marks the plan as skipping |
+| Week | The timetable as a grid. Click a class for Attended / Missed / Cancelled beside it. Add a make-up class from the form underneath |
+| Settings | Import (as a diff), undo the last import, backup, restore, clear, download a profile that could not be read — and the semester calendar editor, folded away |
 
 ## Design
+
+**Soft UI, with one rule for which way anything goes.** Every surface is the
+colour of the ground it sits on, and depth comes from two shadows — a highlight
+up-left, a shade down-right — rather than from borders. Raised means you act on
+it: cards, buttons, the active tab, the chosen option in the segmented control.
+Pressed means it holds a value: inputs, gauges, the tab track, the well the
+hero's percentage sits in. A palette declares its ground and two shadow colours,
+`--hi` and `--lo`, and all six shadow depths are derived from those, so a
+palette cannot half-apply.
+
+**Soft UI's known failure is contrast, so no edge that matters is only a
+shadow.** A button whose one edge is a shadow the colour of the page is the
+style's classic accessibility bug. Keyboard focus here is a solid 2px ring in
+the text accent, never a glow. Every status keeps a coloured stripe, and banners
+are tinted, bordered and striped on top of being sunk. Text contrast was measured
+against the grounds, not assumed: body text runs **15.0–17.1:1**, the text
+accent **8.1–15.7:1**, and the lowest pairing on any palette is **4.9:1** —
+Porcelain's muted text, and the amber on both light palettes — above the 4.5:1
+AA line.
+
+**It costs height, and that is deliberate.** Rows sit 16px apart instead of 8,
+because any closer and one row's shade lands on the next row's highlight and
+both go muddy. The Courses tab with one course expanded runs 2028px at 1500
+wide against 1966px before, and 3260px against 3076px on a phone.
 
 **Four palettes, each a complete token set.** Two dark and two light, ported
 from the Study Tracker's twenty-six. None is derived from another and none is a
 filter over another — every one declares the same tokens, so switching reaches
 every hairline, wash and shadow rather than the obvious parts.
 
-| Palette | | Accent | Ground |
-|---|---|---|---|
-| **Monolith** | dark | `#9FA8DA` periwinkle | near-black `#020203` |
-| **Mariana** | dark | `#26C6DA` cyan | near-black `#010203` |
-| **Porcelain** | light | `#2563A8` blue | cool grey `#E8EBEE` |
-| **Ink** | light | `#3B3F8F` indigo | violet-white `#EAEAEE` |
+| Palette | | Accent (fill) | Text accent | Safe | Ground |
+|---|---|---|---|---|---|
+| **Selene** | dark | `#CFD8DC` pale grey | `#DFE5E8` | `#DFE5E8` silver | near-black `#0D1317` |
+| **Wraith** | dark | `#B2EBF2` pale spectral cyan | `#CCF2F6` | `#46C98F` green | near-black `#0D1317` |
+| **Porcelain** | light | `#2563A8` blue | `#17457A` | `#2F6B45` green | cool grey `#E8EBEE` |
+| **Ink** | light | `#3B3F8F` indigo | `#242766` | `#2F6B45` green | violet-white `#E9E9EE` |
+
+**Two accents, split the way the Study Tracker splits them.** `--accent` is a
+fill — the primary button, the hero's stripe. `--accent-ink` is the text accent —
+links, the focus ring, card headings, the hero's kicker, today's column in the
+Week grid. On a dark palette it is a step lighter than the fill and on a light
+one a step darker, so it holds up as type on either: Porcelain's fill blue
+`#2563A8` is 5.1:1 on its ground, its text blue `#17457A` is 8.1:1. What sits on
+the fill is a third token, `--on-accent`.
+
+**Selene and Wraith are the Study Tracker's, colour for colour — only the roles
+move.** Nothing in either is invented. The Study Tracker's page ground,
+`#050708`, leaves no room below it for a shade, and soft UI on it turns back
+into flat. So its card surface, `#0D1317`, is the ground here; its page ground
+becomes the recess that gauges and wells sink into; its `bg-deep`, `#020203`,
+is the shade; and its raised surface, `#1E2022`, is the highlight. Text,
+hairlines, both accents and all three status colours are its own. The two differ
+in accent, muted text and the colour of safe, exactly as they do there.
 
 **The four were picked by a rule, not by taste.** Green, amber and red are never
 decoration here: they mean safe, close to the bar, and under it. An accent that
 lands inside that band puts a verdict on your attendance into the focus ring and
 the active tab. That rules out every warm palette the Study Tracker carries —
 paper's amber sits on `--warn`, linen's rust and akira's red on `--bad`, meadow's
-and nostromo's green on `--ok`. The four that survive are all cool, and that is a
-consequence rather than a preference. A red edge in the corner of your eye always
+and nostromo's green on `--ok`. All four here are cool, and that is a consequence
+of the rule rather than a preference. A red edge in the corner of your eye always
 means the same thing.
+
+**On Selene, safe is silver, and the only colour on the page is a warning.**
+Selene's own `--good` is `#DFE5E8`, and it is used as-is rather than swapped for
+a green. The cost is real: a safe course's percentage is the same colour as the
+text accent — links, the focus ring, card headings — and 1.16:1 from body text,
+so "you have leave" no longer looks different from "this is text". What still
+separates the three states is that close and under keep their amber and red,
+every row keeps its stripe, and the gauge still draws the distance to the bar.
+Pick Wraith for the same dark ground with a green safe.
 
 The choice is stamped onto `<html>` by an inline script in `<head>` before the
 body parses, so a returning visitor gets their palette as the first paint rather
@@ -145,10 +196,55 @@ to "can I skip this" required a scroll.
 
 **A row that looks clickable does something.** Every course row carried a
 pointer cursor and a hover nudge from the first build and had no handler at
-all. Clicking one now opens what is left of that course — the next ten
-sessions, each cycling attending → absent → cancelled on the same click the
-Week grid uses. The toggle is a real button on the course code, so it is
-reachable by keyboard and announced as expanded or collapsed.
+all. Clicking one now opens that course's whole term — every class already
+held, newest first, then the next ten — so an absence from week one is two
+clicks from the Overview rather than nine Previous clicks on the Week grid.
+The toggle is a real button on the course code, so it is reachable by
+keyboard and announced as expanded or collapsed.
+
+**A mark is set, never cycled.** A class used to step attended → absent →
+cancelled on each click. A second tap on an absence — a double-tap, or "did
+that register?" — cancelled the class: the absence vanished, the class left
+the denominator, and on a real ECO373 profile the leave went from 12.375h to
+**13.125h**. Every place that logs a class now offers three explicit buttons,
+pressing the state a class is already in does nothing, and every change raises
+a bar at the foot of the screen with **Undo**. The undo stack is twenty deep and
+lives in memory only; it does not survive a reload, and nothing says it does.
+
+**Every past class counts as attended until something says otherwise, so the
+app asks.** Imported on 19 October, a five-course plan credited **116 classes,
+155.0h** as attended without a word, and every course read 100.0%. Now the
+first screen says how many classes have been held and asks which is true: you
+missed some (check them week by week), you have no records (count from today),
+or you attended them all. After that, `reviewedThrough` records the last day
+you checked, the Log tab carries a count of what has happened since, and the
+Overview says in the same sentence as the figures that those classes are
+counted on trust. The check-in goes oldest week first, because it moves one
+date forward: saving a recent week while an older one sat unread would declare
+the older one checked too.
+
+**The leave planner prices whole days through the same arithmetic as
+everything else, and never rounds in your favour.** A day you plan off marks
+every class you would still have that day as missed in a what-if passed to
+`stats()`, and every other day is re-judged against the plan: affordable,
+tight (some course left with under one class of leave), or not — naming the
+course it breaks and by how much. The yes/no reads the raw budget, not the
+floored figure on screen. On the five-course fixture, skipping Thursday 29
+October buys Thursday to Sunday off (30 and 31 October are university holidays)
+for MAT230 1.5h, ECO373 1.5h and ENG449 1.0h. **Breaks you can afford** finds
+those combinations itself: every window of up to 9 days in which each day is
+either already off or a class day you would skip, at most 3 skipped, that
+cannot be stretched by one more free day — kept only if it fits on top of the
+plan so far, ranked by days off per day skipped. It is whole days only; one
+skipped class is a mark on the Week grid. Nothing in a plan counts until you
+mark it, and a planned day that passes is dropped with a banner, never turned
+into an absence.
+
+**An unreadable profile is set aside before anything can overwrite it.** It
+used to be replaced by the first click that saved — a palette swatch was
+enough — while the banner promised it "was not overwritten". The raw string
+now goes to `atten.v1.unreadable-<timestamp>` the moment it fails to parse,
+and Settings offers it as a download.
 
 **A future class you have already marked absent costs the budget now, not on
 the day it passes.** This was a bug: the budget assumed you would attend every
@@ -176,7 +272,7 @@ that does nothing is worse than one that is visibly off.
 
 What it cannot fix is that **the registrar still counts those weeks.** Your
 percentage here will read higher than the official one, permanently, and a
-banner says so and does not go away. Reconcile is how you close that gap.
+banner says so and does not go away. Log › Reconcile is how you close that gap.
 
 **Cancelled is a third state, not an absence you forgive.** A cancelled class
 leaves both sides of the fraction — it is removed from what was held, from the
@@ -197,7 +293,20 @@ attendance alone.
 and this app is not, so it computes the gap, lists candidate sessions most
 recent first — a forgotten log is far more common than a false absence — and
 waits for your click. An app that silently edited itself to match a number you
-typed would launder a typo into a budget you then trust.
+typed would launder a typo into a budget you then trust. It takes the record
+either as a percentage or as classes attended of held, `27/32`. The count form
+is compared in classes against the registrar's own denominator; a percentage
+can only be compared against this app's held hours, which leave out any weeks
+before a count-from date, and the reply says so when one is set.
+
+**The empty states are drawn, not decorated.** With no timetable, a lecture
+hall of empty fold-up seats; with no leave planned, a key rack with every key
+still on its hook. Both are [Hairline](https://lucasmarkes.com/lab/hairline)
+figures — the package's kernel, inlined unchanged, with two figures drawn on
+it that answer the pointer. They live only where the page has nothing else to
+say: a drawing beside a percentage would compete with the one figure the page
+is for. Their colours come from the active palette through the kernel's own
+`--hairline-*` hooks, so all four palettes reach them.
 
 **No `alert()`, no `confirm()`, anywhere.** Every refusal is an inline message
 naming what went wrong. Loading a plain `bob-plan` export tells you it got
@@ -211,7 +320,9 @@ keys but no meeting times.
 | Contact hours. Verified against all 1068 meetings in the timetable data: nine distinct durations, `round(min/60*2)/2` maps every one unambiguously | Half-semester courses. 1066 of 1068 meetings are `Full semester` and none are tagged second-half, so that path is verified against a synthetic fixture only |
 | The semester calendar. Transcribed from the university's published PDF and checked against its own teaching-day table — all 30 per-weekday counts, both half-totals, all 79 days | The 75% bar. It is the usual figure, editable per course where a syllabus sets its own |
 | Saturday teaches. 28 meetings are scheduled on Saturdays; Sunday has none | Which courses meet on the 1 October buffer day. See below |
-| The arithmetic. 118 assertions, driven by real clicks | |
+| The arithmetic. 118 assertions, driven by real clicks | Unchecked classes. Counted as attended until checked, and the Overview says how many |
+| The planner's verdicts. Every class day and every suggested break on a five-course fixture re-checked against `stats()`: none called affordable goes under a bar | Whole days. The planner never models skipping half a day |
+| Explicit marks. A second tap on Missed leaves the leave unchanged; the old cycle gave back 0.75h | Ashoka's record format. Reconcile accepts both `84.4` and `27/32` because which one the portal shows is unconfirmed |
 
 ## The semester calendar
 
@@ -259,11 +370,17 @@ would leave every other copy of the app with the old one.
 
 One key, `atten.v1`, holds the whole profile — courses, every logged session,
 extras, per-course bars, reconcile figures. It carries an integer
-`SCHEMA_VERSION`, migrated on read: **v3** turns the old `theme` values into
-palette ids, so `dark` becomes Monolith and `light` becomes Porcelain rather
-than resetting anyone to the default. `atten.undo` holds the profile from
+`SCHEMA_VERSION`, migrated on read: **v6** added `reviewedThrough` and
+`leavePlan`, both empty for an existing profile, so it gets the start-up
+question once with "My log is up to date" as one answer; **v3** turned the old `theme` values into
+palette ids, **v4** retired two of those ids and **v5** retired Cryotube for
+Wraith. `PALETTE_WAS` maps every id the app has ever written straight onto what
+currently replaces it — `dark` and `monolith` to Selene, `mariana` and
+`cryotube` to Wraith, `light` to Porcelain — so a retired palette never silently
+resets anyone to the default. `atten.undo` holds the profile from
 before the last import. `atten.archive.<semester>` holds a displaced term, kept
-and never mixed in. Nothing else is written, and the `atten.` prefix exists
+and never mixed in. `atten.v1.unreadable-<timestamp>` holds a profile that
+failed to parse, verbatim. Nothing else is written, and the `atten.` prefix exists
 because Bob and this app share one `file://` origin.
 
 Backup and restore round-trip the whole profile as JSON. Nothing is transmitted
@@ -278,3 +395,9 @@ Bumping the cache name by hand on each deploy would have worked until the first
 time it was forgotten. Now the page is fetched from the network with the cache
 as the fallback, so it still opens on a plane, and the icon and manifest stay
 cache-first because they are tiny and versionless.
+
+**On activation it deletes only its own old caches.** Every app on
+`talon270.github.io` shares one origin and so one CacheStorage. The first
+version deleted every cache not named `atten-v2`, which wiped the other apps'
+offline copies the first time this one updated; it now only touches names
+starting `atten-`.
