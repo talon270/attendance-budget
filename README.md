@@ -38,7 +38,7 @@ deploy .` puts it on Cloudflare with no changes.
 | Log | **Check in**: the oldest unchecked week of held classes, one tap per class and "All attended" per day. **Fix one course**: every class of the term, newest first. **Paste the portal record**: the portal's attendance table, pasted as copied, overwrites logged marks, with cancelled and make-up classes proposed from its dates. With no timetable loaded the same paste box sits on the empty Overview and prints each class's percentage and leave, saving nothing. **Reconcile** against the official record as `84.4` or `27/32`. **Start counting from** |
 | Leave | A live calendar from today to term end. Click class days to plan them off; every other day re-judges itself against the plan. Per-course leave before and after, **Breaks you can afford**, and one button that marks the plan as skipping |
 | Week | The timetable as a grid. Click a class for Attended / Missed / Cancelled beside it. Add a make-up class from the form underneath |
-| Settings | Import (as a diff), undo the last import, backup, restore, clear, download a profile that could not be read — and the semester calendar editor, folded away |
+| Settings | Rounding (Safe or Best possible), import (as a diff), undo the last import, backup, restore, clear, download a profile that could not be read — and the semester calendar editor, folded away |
 
 ## Design
 
@@ -139,7 +139,7 @@ type it replaced, because mono runs perceptibly wider at the same pixel size.
 **Adaptive by layout, not by squeezing.** On a phone it is one stacked column
 and the percentage drops below the course code. From 720px the hero splits in
 two — the sentence on the left, the figure it is about on the right — and from
-1080px the page itself becomes two columns with a sticky rail, so the controls
+1080px the page itself becomes two columns with a rail, so the controls
 stop pushing the answer below the fold. The rail carries four real modules
 rather than one and a canyon of empty background.
 
@@ -155,19 +155,32 @@ subtract in your head.
 ## The things most attendance trackers get wrong
 
 **A tracker must never tell you that you have leave you do not have.** That is
-the one failure this app is designed around, and every rounding decision breaks
-the same way. A budget of 9.75 hours prints as **9.7h**, never 9.8h. A
+the one failure this app is designed around, and by default every rounding
+decision breaks the same way. A budget of 9.75 hours prints as **9.7h**, never 9.8h. A
 percentage of 74.99% prints as **74.9%**, never 75.0%. A shortfall of 0.41h
 prints as **0.5h short**, never 0.4h. Each of those roundings costs you a tenth
 of an hour you would not have missed anyway; the opposite rounding costs you the
 course.
+
+**Best possible is the exception, and you switch it on yourself.** Settings has
+a Safe / Best possible switch, and `Atten.setRounding('best')` does the same from
+the console. Best possible rounds hours and percentages to the nearest tenth, so
+9.75h prints as 9.8h, a figure .05h above what you have. Leave in classes becomes
+the true maximum: how many of your real remaining classes fit if you skip the
+shortest first. The class count is only reachable by skipping in that order, so
+each row says **at most**, which is also how you can tell the mode is on. Colours
+and the planner's verdicts read the raw numbers, so neither changes. A percentage
+never rounds up across a whole percent: 74.96% prints as 74.96%, not 75.0%. A
+shortfall under .05h stays ceilinged, because a red course reading "0.0h short"
+says nothing.
 
 **The session count is floored against the longest class still to come, not the
 average one.** ECO354 meets Mon/Wed/Fri for 55 minutes, 39 sessions survive the
 calendar, so the semester total is 39.0h. At a 75% bar you must attend 29.25h,
 leaving 9.75h of budget. That displays as **9 classes, not 10** — missing ten
 1.0h classes leaves 29.0h attended, which is 74.4% and a fail. The hours figure
-is exact; the class-equivalent is the conservative reading of it.
+is exact; the class-equivalent is the conservative reading of it. A class you have
+already marked skipping no longer sets that length: it cannot be skipped twice.
 
 **An import is a diff, never a replace.** Change a section in Bob, re-export,
 and a naive importer silently drops the sessions whose keys no longer resolve —
@@ -229,7 +242,7 @@ every class you would still have that day as missed in a what-if passed to
 `stats()`, and every other day is re-judged against the plan: affordable,
 tight (some course left with under one class of leave), or not — naming the
 course it breaks and by how much. The yes/no reads the raw budget, not the
-floored figure on screen. On the five-course fixture, skipping Thursday 29
+figure on screen. On the five-course fixture, skipping Thursday 29
 October buys Thursday to Sunday off (30 and 31 October are university holidays)
 for MAT230 1.5h, ECO373 1.5h and ENG449 1.0h. **Breaks you can afford** finds
 those combinations itself: every window of up to 9 days in which each day is
@@ -318,11 +331,11 @@ keys but no meeting times.
 | Solid | Assumed |
 |---|---|
 | Contact hours. Verified against all 1068 meetings in the timetable data: nine distinct durations, `round(min/60*2)/2` maps every one unambiguously | Half-semester courses. 1066 of 1068 meetings are `Full semester` and none are tagged second-half, so that path is verified against a synthetic fixture only |
-| The semester calendar. Transcribed from the university's published PDF and checked against its own teaching-day table — all 30 per-weekday counts, both half-totals, all 79 days | The 75% bar. It is the usual figure, editable per course where a syllabus sets its own |
-| Saturday teaches. 28 meetings are scheduled on Saturdays; Sunday has none | Which courses meet on the 1 October buffer day. See below |
+| The semester calendar. Transcribed from the university's published PDF and checked against its own teaching-day table — all 30 per-weekday counts, both half-totals, all 79 days | The 75% bar, and how it is judged. Editable per course where a syllabus sets its own. The app weights by hours and pools lecture, tutorial and lab into one figure; the portal records each component separately, and whether the rule counts classes or checks each component on its own is unconfirmed. If it does, a lab can be under the bar while the Overview reads safe |
+| Saturday teaches. 28 meetings are scheduled on Saturdays; Sunday has none | That only full-semester courses meet on the 1 October buffer day. See below |
 | The arithmetic. 118 assertions, driven by real clicks | Unchecked classes. Counted as attended until checked, and the Overview says how many |
 | The planner's verdicts. Every class day and every suggested break on a five-course fixture re-checked against `stats()`: none called affordable goes under a bar | Whole days. The planner never models skipping half a day |
-| Explicit marks. A second tap on Missed leaves the leave unchanged; the old cycle gave back 0.75h | Ashoka's record format. Reconcile accepts both `84.4` and `27/32` because which one the portal shows is unconfirmed |
+| Explicit marks. A second tap on Missed leaves the leave unchanged; the old cycle gave back 0.75h | The portal's record format. Reconcile accepts both `84.4` and `27/32` because which one the portal shows is unconfirmed |
 
 ## The semester calendar
 
@@ -346,14 +359,16 @@ closed the university on seven days it is open, which understates every
 denominator in the app. The published weekday counts confirm the colours: August
 has two teaching Fridays, and the 28th — Raksha Bandhan — is one of them.
 
-**The half-semester boundary is 1 October, not the 12 October the PDF labels
-"2nd half begins".** The PDF also publishes 39 first-half and 40 second-half
-teaching days, and the only split that produces both numbers puts the 1 October
-buffer day in the second half. A first-half course therefore last meets on 30
-September, which is exactly what that date's own label — "First Half Finishes" —
-says. What the buffer day is *for* is not stated anywhere in the document; this
-is the reading that agrees with the registrar's counts, not a confident claim
-about which classes actually run that Thursday.
+**The two halves do not touch: the first ends 30 September and the second begins
+12 October.** Both dates are the PDF's own labels. 1 October is the one teaching
+day between them, and only a full-semester course meets on it. The PDF's 39
+first-half and 40 second-half teaching days still reproduce, because its table
+counts that day under the second half, but a count of days does not put a
+second-half course in the room. Treating it as if it did gave every Thursday
+second-half course a class that defaults to attended and inflated both its
+percentage and its leave. What the buffer day is *for* is not stated anywhere in
+the document; this is the reading that invents no class, not a confident claim
+about what runs that Thursday.
 
 The last two teaching days run someone else's timetable: **30 November runs
 Tuesday's schedule and 1 December runs Friday's.** A Monday-only course finishes

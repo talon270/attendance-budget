@@ -556,17 +556,10 @@ label.field > *{text-transform:none; letter-spacing:0; font-size:.95rem; font-we
    controls stop pushing the answer below the fold. */
 .split{display:grid; gap:var(--s6); align-items:start}
 @media (min-width:1080px){ .split{grid-template-columns:minmax(0,1.6fr) minmax(290px,.9fr)} }
+/* The rail scrolls with the page. As a sticky pane capped at the viewport it
+   grew a second scrollbar: 1002px of rail in 952px at 1920x1080, with the
+   attendance bar card at the bottom of it, out of sight. */
 .rail .card{padding:var(--s4) var(--s5)}
-/* Sticky, but never taller than the space it has, so it scrolls inside its own
-   pane rather than stranding the bottom of the page beside dead background.
-   A scrolling pane clips whatever overflows it, shadows included, so the rail
-   carries 20px of padding for its cards' shadows to fall into and a matching
-   negative margin to keep its cards aligned with the column beside it.
-   top: 60 header + 58 tab strip + 24 gap - 14 padding = 128. */
-@media (min-width:1080px){
-  .rail{position:sticky; top:128px; max-height:calc(100vh - 128px); overflow-y:auto;
-        scrollbar-width:thin; margin:-14px -20px; padding:14px 20px}
-}
 
 /* Staggered entry - never all at once, and only when the view actually
    changed. Every render replaces #view wholesale, so an unscoped rule replayed
@@ -758,14 +751,16 @@ td.num,th.num{text-align:right; font-variant-numeric:tabular-nums; font-size:.82
 
 // --- Constants -------------------------------------------------------------
 
-const SCHEMA_VERSION = 6;   // 2 adds countFrom; 3 made theme a palette id; 4 and 5 retire some of them; 6 adds reviewedThrough and leavePlan
+const SCHEMA_VERSION = 7;   // 2 adds countFrom; 3 made theme a palette id; 4 and 5 retire some of them; 6 adds reviewedThrough and leavePlan; 7 adds rounding
 const STORE_KEY   = 'atten.v1';        // the whole profile, one key
 const UNDO_KEY     = 'atten.undo';     // pre-import snapshot, one deep
 const ARCHIVE_PRE  = 'atten.archive.'; // a displaced semester, never mixed in
 const RESCUE_PRE   = STORE_KEY + '.unreadable-'; // a profile that would not parse, kept verbatim
 const UNDO_DEPTH   = 20;               // marks you can step back through; memory only, gone on reload
 
-// 75% is Ashoka's usual bar. It is per-course editable because a course can
+// 75% is an assumption: no document in this repository states the bar, and
+// nothing here confirms whether it is judged on hours or classes, or on each
+// component separately. It is per-course editable because a course can
 // set its own, and the app must never argue with a syllabus.
 const DEFAULT_THRESHOLD = 0.75;
 
@@ -800,18 +795,20 @@ const DEFAULT_GRID_START = 480, DEFAULT_GRID_END = 1200;
 // The PDF's own per-weekday teaching counts prove it, and this file reproduces
 // all thirty of those counts exactly - see the harness.
 //
-// halfBoundary is 1 October, not the 12 October the PDF labels "2nd half
-// begins", and that is deliberate. The PDF also publishes 39 first-half and 40
-// second-half teaching days, and the only split reproducing both puts the
-// 1 October buffer day in the second half. First Half Finishes 30 September,
-// exactly as the PDF's own label on that date says.
+// The two halves do not touch. First Half Finishes 30 September and 2nd half
+// begins 12 October, both the PDF's own labels. 1 October is the one teaching
+// day between them, and only a full-semester course meets on it. The PDF's 39
+// and 40 teaching days still reproduce, because its table counts that day under
+// the second half; a half course simply has no class on it. Putting a Thursday
+// second-half course on 1 October invented a class that defaults to attended.
 const CALENDAR = {
   semester: 'monsoon2026', label: 'Monsoon 2026',
   authored: '2026-09-03', provisional: false,
   source: 'Shiv Nadar University, Academic Calendar for Monsoon 2026',
   start: '2026-08-17',   // Start of classes for all students
   end:   '2026-12-01',   // Last Teaching Day, run as a Friday
-  halfBoundary: '2026-10-01',
+  firstHalfEnd: '2026-09-30',
+  secondHalfStart: '2026-10-12',
   off: [
     '2026-10-02',                                        // Gandhi Jayanti
     '2026-10-03', '2026-10-05', '2026-10-06',            // Mid Term Examinations
@@ -853,11 +850,24 @@ const h1 = n => (Math.round(n*10)/10).toFixed(1);
 // Leave is floored and a shortfall is ceilinged, both to one decimal. 9.75h of
 // budget prints as 9.7h, never 9.8h: a tenth of an hour the student does not
 // have is exactly the lie this app exists to not tell.
-const hDown = n => (Math.floor(n*10 + 1e-9)/10).toFixed(1);
-const hUp   = n => (Math.ceil(n*10 - 1e-9)/10).toFixed(1);
+//
+// S.rounding === 'best' rounds to the nearest tenth instead, by your choice in
+// Settings. Only the words change: every state and verdict reads the raw figure.
+const bestMode = () => S.rounding === 'best';
+const hDown = n => bestMode() ? h1(n) : (Math.floor(n*10 + 1e-9)/10).toFixed(1);
+// Under .05h a shortfall would print as 0.0h short next to a red course, so it
+// stays ceilinged in both modes.
+const hUp   = n => bestMode() && n >= .05 ? h1(n) : (Math.ceil(n*10 - 1e-9)/10).toFixed(1);
 
-// Percentages floor rather than round: 74.96% must never print as 75%.
-const pctText = f => (Math.floor(f*1000)/10).toFixed(1) + '%';
+// Percentages floor rather than round: 74.96% must never print as 75%. Best
+// possible rounds, but never up across a whole percent, and bars are whole
+// percents: 74.96 prints as 74.96, not 75.0. The epsilon is for f*100, where
+// 0.57 becomes 56.99999999999999; f*1000 lands exact on every fraction tried.
+function pctText(f){
+  if(!bestMode()) return (Math.floor(f*1000)/10).toFixed(1) + '%';
+  const r = Math.round(f*1000)/10;
+  return (Math.floor(r) > Math.floor(f*100 + 1e-9) ? (Math.floor(f*10000 + 1e-9)/100).toFixed(2) : r.toFixed(1)) + '%';
+}
 
 // --- Storage ---------------------------------------------------------------
 
@@ -873,7 +883,10 @@ function blank(){
            reviewedThrough: null,
            // Whole days off you are considering. A what-if only - nothing here
            // touches a figure until you commit it as missed classes.
-           leavePlan: [] };
+           leavePlan: [],
+           // 'safe' rounds every figure against you; 'best' rounds to the nearest
+           // tenth and counts leave as the most real classes that fit.
+           rounding: 'safe' };
 }
 function migrate(o){
   if(!o || typeof o !== 'object') return blank();
@@ -948,7 +961,6 @@ function sessions(){
   const cf = countFrom();
   const off = new Set(CALENDAR.off || []);
   const swaps = CALENDAR.swaps || {};
-  const hb = CALENDAR.halfBoundary;
   for(let d = CALENDAR.start; d <= CALENDAR.end; d = addDays(d,1)){
     if(off.has(d)) continue;
     const real = dowName(d);
@@ -957,8 +969,8 @@ function sessions(){
     if(day === 'Sun') continue;
     S.courses.forEach(c => (c.meetings||[]).forEach(m => {
       if(m.day !== day) return;
-      if(m.term === 'First half'  && hb && d >= hb) return;
-      if(m.term === 'Second half' && hb && d <  hb) return;
+      if(m.term === 'First half'  && d > CALENDAR.firstHalfEnd) return;
+      if(m.term === 'Second half' && d < CALENDAR.secondHalfStart) return;
       out.push({ id: c.code+'|'+m.comp+'|'+m.sec+'|'+d+'|'+m.start,
                  code: c.code, comp: m.comp, sec: m.sec, date: d,
                  start: m.start, end: m.end, room: m.room, hours: contactHours(m.start, m.end),
@@ -1054,22 +1066,31 @@ const thresholdOf = code => (S.thresholds && S.thresholds[code] != null) ? S.thr
 
 // --- The numbers -----------------------------------------------------------
 //
-// held    = non-cancelled sessions dated before today
+// held    = non-cancelled sessions that have ended, today's included
 // attended= held minus the hours marked absent
 // total   = every non-cancelled session, past and future
 // budget  = attended + future - threshold x total, floored at zero
 //
 // The session-equivalent of the budget is floored against the largest session
 // still to come. 9.75h of budget on 1.0h classes is nine classes, not ten:
-// missing ten leaves 29.0h of 39.0h, which is 74.4% and a fail.
+// missing ten leaves 29.0h of 39.0h, which is 74.4% and a fail. Best possible
+// counts mostClasses() instead.
 
 // `hypo`, when given, is a Set of session ids to price as missed - the leave
 // planner's what-if. It never touches S.log, and a cancelled class stays
 // cancelled whatever the plan says.
+// The most of these classes that fit in the budget. Shortest first is optimal:
+// every class costs its own hours, and the absences stay in the total.
+function mostClasses(hours, budget){
+  let n = 0, spent = 0;
+  for(const h of hours.sort((a,b) => a - b)){ if(spent + h > budget + 1e-9) break; spent += h; n++; }
+  return n;
+}
+
 function stats(code, hypo){
   const thr = thresholdOf(code);
-  let held = 0, absent = 0, total = 0, future = 0, maxH = 0, nHeld = 0, nAbsent = 0;
-  const todayK = today();
+  let held = 0, absent = 0, total = 0, future = 0, ahead = 0, maxH = 0, nHeld = 0, nAbsent = 0;
+  const todayK = today(), now = nowMin(), left = [];
   sessions().forEach(s => {
     if(s.code !== code) return;
     if(!s.counted) return;
@@ -1077,12 +1098,15 @@ function stats(code, hypo){
     if(mark === 'cancelled') return;
     if(hypo && hypo.has(s.id)) mark = 'absent';
     total += s.hours;
-    if(s.date < todayK){ held += s.hours; nHeld++; if(mark === 'absent'){ absent += s.hours; nAbsent++; } }
+    // Held the moment it ends, the line isOver() draws. Waiting for midnight
+    // let a class missed this morning lower the leave but not the percentage.
+    if(s.date < todayK || (s.date === todayK && s.end <= now)){ held += s.hours; nHeld++; if(mark === 'absent'){ absent += s.hours; nAbsent++; } }
     // A future class you have already decided to miss is not slack you still
     // hold. It stays in the semester total - it is still scheduled - but it
     // stops counting toward what you will have attended, so the budget drops
     // the moment you mark it rather than on the day it passes.
-    else { if(mark !== 'absent') future += s.hours; if(s.hours > maxH) maxH = s.hours; }
+    else if(mark === 'absent') ahead += s.hours;
+    else { future += s.hours; left.push(s.hours); if(s.hours > maxH) maxH = s.hours; }
   });
   const attended = held - absent;
   const budget = attended + future - thr*total;
@@ -1090,25 +1114,36 @@ function stats(code, hypo){
   const st = { code, thr, held, absent, attended, total, future, nHeld, nAbsent, budget,
                pct: nHeld ? attended/held : null,
                budgetHours: Math.max(0, budget),
-               budgetSessions: Math.max(0, Math.floor(Math.max(0,budget)/step)),
-               step, reachable: budget >= 0 || (attended + future) >= thr*total };
+               budgetSessions: bestMode() ? mostClasses(left, budget) : Math.max(0, Math.floor(Math.max(0,budget)/step)),
+               // Could attending everything still attendable reach the bar? A
+               // class marked to miss can still be attended, so it counts here.
+               step, reachable: budget + ahead >= -1e-9 };
   st.shortHours = st.pct == null ? 0 : Math.max(0, thr*held - attended);
-  st.state = !nHeld ? 'none' : st.pct < thr ? 'over' : (st.budgetHours < step ? 'close' : 'safe');
+  // At the bar today, under it by term end. Only classes marked to miss can do
+  // that: attending every future class never lowers a percentage below the bar.
+  st.underByEnd = budget < -1e-9 && (st.pct == null || st.pct >= thr);
+  st.state = !nHeld ? 'none' : (st.pct < thr || st.underByEnd) ? 'over' : (st.budgetHours < step ? 'close' : 'safe');
   return st;
 }
 
 function stateLine(st){
+  if(st.underByEnd) return 'The classes you have marked to miss put you ' + hUp(-st.budget) + 'h under ' + Math.round(st.thr*100) + '% by the end of term.';
   // No percentage exists before the first class, but the budget does - it is
   // arithmetic on the calendar alone. Showing the total and staying silent on
   // the leave would withhold the one number the student came for.
   if(st.state === 'none') return 'No classes held yet - ' + h1(st.total) + 'h scheduled. That leaves '
-    + hDown(st.budgetHours) + 'h of leave (' + st.budgetSessions + ' ' + (st.budgetSessions===1?'class':'classes')
-    + ' of ' + h1(st.step) + 'h) at a ' + Math.round(st.thr*100) + '% bar.';
+    + hDown(st.budgetHours) + 'h of leave (' + (bestMode() ? 'up to ' : '') + st.budgetSessions + ' ' + (st.budgetSessions===1?'class':'classes')
+    + (bestMode() ? '' : ' of ' + h1(st.step) + 'h') + ') at a ' + Math.round(st.thr*100) + '% bar.';
   if(st.state === 'over'){
     let l = 'You are ' + hUp(st.shortHours) + 'h short of ' + Math.round(st.thr*100) + '%. ' + h1(st.future) + 'h of classes remain.';
     if(!st.reachable) l += ' Attending every one of them still leaves you under the bar - this course cannot be recovered by attendance alone.';
+    else if(st.budget < -1e-9) l += ' The classes you have marked to miss leave you ' + hUp(-st.budget) + 'h under by the end of term.';
     return l;
   }
+  // Ahead of the close line: its "less than one class" is measured against the
+  // longest class, and in this mode a shorter one may still fit.
+  if(bestMode() && st.budgetSessions) return 'Up to ' + st.budgetSessions + ' ' + (st.budgetSessions===1?'class':'classes')
+    + ' of leave left if you skip the shortest ones first (' + hDown(st.budgetHours) + 'h in all).';
   if(st.state === 'close') return 'Less than one class of leave left (' + hDown(st.budgetHours) + 'h). One more absence puts you under ' + Math.round(st.thr*100) + '%.';
   return st.budgetSessions + ' ' + (st.budgetSessions===1?'class':'classes') + ' of leave left, counting each as ' + h1(st.step) + 'h, the longest still to come (' + hDown(st.budgetHours) + 'h in all).';
 }
@@ -1155,7 +1190,7 @@ function banners(){
   if(S.__planDropped) out.push(['warn', S.__planDropped + ' planned day' + (S.__planDropped===1?' has':'s have') + ' passed',
     'They were dropped from your leave plan. Nothing was marked missed - if you did take them, log them on the Log tab.']);
   if(S.__future) out.push(['bad','This profile was written by a newer version of the app','Some of what it holds may not be shown. Update the app rather than logging on top of it.']);
-  if(CALENDAR.provisional) out.push(['warn','The semester calendar is provisional','Its dates were not taken from Ashoka\'s published academic calendar - nothing on this machine holds one. Term start '+prettyDate(CALENDAR.start)+', end '+prettyDate(CALENDAR.end)+', half-semester boundary '+prettyDate(CALENDAR.halfBoundary)+', 0 holidays. Until you author the real one in the Calendar tab, every budget below is arithmetic on dates that are a guess.']);
+  if(CALENDAR.provisional) out.push(['warn','The semester calendar is provisional','Its dates were not taken from the university\'s published academic calendar - nothing on this machine holds one. Term start '+prettyDate(CALENDAR.start)+', end '+prettyDate(CALENDAR.end)+', first half ends '+prettyDate(CALENDAR.firstHalfEnd)+', second half begins '+prettyDate(CALENDAR.secondHalfStart)+', 0 holidays. Until you author the real one in the Calendar tab, every budget below is arithmetic on dates that are a guess.']);
   if(today() > CALENDAR.end) out.push(['warn','The calendar has run out','It was authored on '+CALENDAR.authored+' for '+CALENDAR.label+', which ended '+prettyDate(CALENDAR.end)+'. No sessions exist past that date, so every budget is frozen at the term end.']);
   if(S.countFrom && S.countFrom > CALENDAR.start){
     const x = excluded();
@@ -1372,7 +1407,7 @@ function heroStat(st){
     + '<div class="hero-lab">attended in ' + esc(st.code) + '</div>'
     + gauge(st.pct*100, st.thr*100, st.state,
         pctText(st.pct) + ' attended against a ' + Math.round(st.thr*100) + ' percent bar')
-    + '<p class="hero-fig"><b>' + hDown(st.budgetHours) + 'h</b> of leave left &middot; bar '
+    + '<p class="hero-fig">' + (st.budget < -1e-9 ? '<b>' + hUp(-st.budget) + 'h</b> under by term end' : '<b>' + hDown(st.budgetHours) + 'h</b> of leave left') + ' &middot; bar '
     + Math.round(st.thr*100) + '%<br>' + h1(st.attended) + 'h of ' + h1(st.held) + 'h held</p></div>';
 }
 
@@ -1395,8 +1430,9 @@ function heroView(){
   const after = st.budgetHours - cost;
   let cost_line;
   if(mark === 'absent'){
-    cost_line = 'You have marked this one absent already. ' + hDown(Math.max(0,st.budgetHours))
-      + 'h of leave is what is left after it.';
+    cost_line = 'You have marked this one absent already. ' + (st.budget < -1e-9
+      ? 'Your marked classes put you ' + hUp(-st.budget) + 'h under ' + Math.round(st.thr*100) + '% by the end of term.'
+      : hDown(st.budgetHours) + 'h of leave is what is left after it.');
   } else if(st.state === 'none'){
     cost_line = 'Skipping it costs <b>' + h1(s0.hours) + 'h</b>. Nothing has been held yet, so there is no percentage to weigh it against.';
   } else if(after < 0){
@@ -1497,8 +1533,10 @@ function progressCard(all){
 // Leave in the unit a student decides in. The class count is floored against
 // the longest class still to come, exactly as stats() derives it.
 function leaveCell(st){
+  if(st.underByEnd) return '<b>under by end</b><span>' + hUp(-st.budget) + 'h short</span>';
   if(st.state === 'over') return '<b>under the bar</b><span>' + hUp(st.shortHours) + 'h short</span>';
-  return '<b>' + st.budgetSessions + ' class' + (st.budgetSessions===1?'':'es') + '</b><span>' + hDown(st.budgetHours) + 'h</span>';
+  // "at most" is the standing sign that Best possible is on.
+  return '<b>' + st.budgetSessions + ' class' + (st.budgetSessions===1?'':'es') + '</b><span>' + (bestMode() ? 'at most, ' : '') + hDown(st.budgetHours) + 'h</span>';
 }
 
 function overviewView(){
@@ -1726,22 +1764,29 @@ function reconcileCard(){
 // a cancellation - so each is a tick box, and only dates before a block's last
 // portal date are judged. A "-2" after a date is the second class that day.
 const MONTHS = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+// A date cell, "17 Aug-1". The paste holds one to a line, or a whole tab-separated row.
+const DATE_CELL = /(\d{1,2})\s+([A-Za-z]{3})[A-Za-z]*\s*-\s*(\d+)/g;
+// How long a block can go quiet before it reads as finished rather than as a
+// lecturer who has not entered attendance yet.
+const PORTAL_QUIET_DAYS = 14;
 let PORTAL = null;
 
 function portalParse(text){
   const blocks = [], y0 = +CALENDAR.start.slice(0,4), m0 = +CALENDAR.start.slice(5,7);
   let dates = [];
   String(text).split(/\r?\n/).forEach(raw => {
-    const line = raw.trim(); if(!line) return;
-    if(/^course code$/i.test(line)){ dates = []; return; }
-    let m = line.match(/^(\d{1,2})\s+([A-Za-z]{3})[A-Za-z]*\s*-\s*(\d+)$/);
-    if(m){
-      const mo = MONTHS[m[2].toLowerCase()]; if(!mo) return;
-      const y = mo < m0 ? y0 + 1 : y0;
-      dates.push({date: y+'-'+String(mo).padStart(2,'0')+'-'+m[1].padStart(2,'0'), n: +m[3]});
+    let line = raw.trim(); if(!line) return;
+    if(/^course code\b/i.test(line)){ dates = []; line = line.slice(11).trim(); if(!line) return; }
+    const cells = Array.from(line.matchAll(DATE_CELL));
+    if(cells.length && !line.replace(DATE_CELL, '').trim()){
+      cells.forEach(m => {
+        const mo = MONTHS[m[2].toLowerCase()]; if(!mo) return;
+        const y = mo < m0 ? y0 + 1 : y0;
+        dates.push({date: y+'-'+String(mo).padStart(2,'0')+'-'+m[1].padStart(2,'0'), n: +m[3]});
+      });
       return;
     }
-    m = line.match(/^(\S+?)\s*-\s*([A-Za-z0-9]+)\s+(.+)$/);
+    const m = line.match(/^(\S+?)\s*-\s*([A-Za-z0-9]+)\s+(.+)$/);
     if(!m) return;
     const marks = m[3].trim().split(/\s+/).map(x => x.toUpperCase());
     const b = { code: m[1].toUpperCase(), token: m[2].toUpperCase(), entries: [], err: null, skipped: 0 };
@@ -1814,19 +1859,28 @@ function portalPlan(blocks){
 // when it holds at least half as many classes as the commonest one, so a
 // Saturday make-up does not turn into a weekly class. Leave is in classes, each
 // weighted equally; the app's hour-weighted budget needs the real timetable.
+// Returns {weekday: classes it usually holds}, so a component meeting twice on a
+// Monday projects two classes per Monday, not one.
 function portalDays(entries){
-  const n = {}; entries.forEach(e => { const d = dowName(e.date); n[d] = (n[d]||0) + 1; });
-  const top = Math.max.apply(null, Object.keys(n).map(k => n[k]));
-  return Object.keys(n).filter(k => n[k]*2 >= top);
+  const n = {}, dates = {};
+  entries.forEach(e => { const d = dowName(e.date); n[d] = (n[d]||0) + 1; (dates[d] = dates[d] || new Set()).add(e.date); });
+  const top = Math.max.apply(null, Object.keys(n).map(k => n[k])), out = {};
+  Object.keys(n).forEach(k => { if(n[k]*2 >= top) out[k] = Math.round(n[k]/dates[k].size); });
+  return out;
 }
+// A block that stops by the first half's end and has stayed quiet since reads
+// as a first-half course. The paste has no term column, so this is an inference,
+// and the page says so. A full-term lecturer that far behind looks the same.
+const portalEnded = last => last <= CALENDAR.firstHalfEnd && last < addDays(today(), -PORTAL_QUIET_DAYS);
 function portalRemaining(entries){
   const days = portalDays(entries), last = entries.reduce((a,e) => e.date > a ? e.date : a, '');
+  if(portalEnded(last)) return 0;
   const off = new Set(CALENDAR.off || []), swaps = CALENDAR.swaps || {};
   let rem = 0;
   for(let d = addDays(last, 1); d <= CALENDAR.end; d = addDays(d, 1)){
     if(off.has(d)) continue;
     const real = dowName(d); if(real === 'Sun' && !swaps[d]) continue;
-    if(days.indexOf(swaps[d] || real) >= 0) rem++;
+    rem += days[swaps[d] || real] || 0;
   }
   return rem;
 }
@@ -1855,14 +1909,16 @@ function portalSummary(blocks){
     g.forEach(r => { t.att += r.att; t.held += r.held; t.rem += r.rem; });
     rows.splice(rows.indexOf(g[g.length-1]) + 1, 0, t);
   });
-  const old = rows.filter(r => r.last && r.last < addDays(today(), -14));
+  const ended = rows.filter(r => r.last && portalEnded(r.last));
+  const old = rows.filter(r => r.last && !portalEnded(r.last) && r.last < addDays(today(), -PORTAL_QUIET_DAYS));
   return '<div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>Class</th><th class="num">Attended</th><th class="num">Percent</th>'
     + '<th class="num">To come <span class="est">est.</span></th><th>Verdict <span class="est">est.</span></th></tr></thead><tbody>'
     + rows.map(r => '<tr' + (r.pooled ? ' class="muted"' : '') + '><td style="white-space:nowrap">' + esc(r.label) + '</td><td class="num">' + r.att + ' / ' + r.held + '</td>'
       + '<td class="num">' + pctText(r.att/r.held) + '</td><td class="num">' + r.rem + '</td><td style="min-width:26ch">' + portalVerdict(r.code, r.att, r.held, r.rem) + '</td></tr>').join('')
     + '</tbody></table></div>'
     + '<p class="tiny muted" style="margin:8px 0 0">Attended, held and percent are the portal\'s own count. <b>To come</b> is not on the portal: it assumes each class keeps meeting on its usual weekdays until ' + esc(prettyDate(CALENDAR.end)) + ', minus the calendar\'s off days. Leave counts classes, not hours.'
-    + (old.length ? ' <span class="est">' + esc(old.map(r => r.label).join(', ')) + ' last met more than two weeks ago; if that class has ended, nothing is still to come.</span>' : '') + '</p>';
+    + (old.length ? ' <span class="est">' + esc(old.map(r => r.label).join(', ')) + ' last met more than two weeks ago; if that class has ended, nothing is still to come.</span>' : '')
+    + (ended.length ? ' <span class="est">' + esc(ended.map(r => r.label).join(', ')) + ' stopped by the end of the first half, so it is read as finished and nothing is projected.</span>' : '') + '</p>';
 }
 
 function portalCard(){
@@ -1891,7 +1947,14 @@ function portalShow(){
   }
   const p = portalPlan(blocks), good = p.rows.filter(r => !r.err);
   const changed = good.reduce((a,r) => a + r.changed, 0), handset = good.reduce((a,r) => a + r.handset, 0);
-  const rt = p.through && (!S.reviewedThrough || p.through > S.reviewedThrough) ? p.through : null;
+  // reviewedThrough is one date for every course, so a course the paste does not
+  // cover must hold it back, or its classes would lose their unchecked warning.
+  // Judged by class, not by course: a second-half course with nothing held by
+  // that date has nothing to lose.
+  const covered = new Set(good.map(r => r.head));
+  const missing = Array.from(new Set(uncheckedSessions().filter(s => !s.extra && s.date <= p.through && markOf(s) !== 'cancelled'
+    && !covered.has(s.code + ' ' + s.comp)).map(s => s.code + ' ' + s.comp)));
+  const rt = !missing.length && p.through && (!S.reviewedThrough || p.through > S.reviewedThrough) ? p.through : null;
   const useful = changed + p.cancels.length + p.adds.length + (rt ? 1 : 0);
   let h = sum;
   p.rows.forEach(r => {
@@ -1905,6 +1968,7 @@ function portalShow(){
     if(r.skipped) h += '<br><span class="est">' + r.skipped + ' mark(s) were neither P nor A and were ignored.</span>';
     h += '</p></div>';
   });
+  if(missing.length) h += '<p class="tiny est" style="margin:10px 0 0">Classes stay unchecked: this paste has no readable block for ' + esc(missing.join(', ')) + '.</p>';
   if(!useful){ out.innerHTML = h + '<div class="msg ok" role="status" style="margin-top:12px">Nothing to change: this app already agrees with the portal.</div>'; return; }
   PORTAL = Object.assign(p, {rt});
   const ck = (id, n, text) => n ? '<label class="ptck"><input type="checkbox" id="' + id + '" checked><span class="tiny">' + text + '</span></label>' : '';
@@ -1948,8 +2012,7 @@ function logView(){
 // Whole days only. A day you plan off prices every class you would still have
 // that day as missed, through stats() with a what-if set, and every other day
 // is re-judged against the plan so far. The yes/no reads stats()'s raw budget,
-// never the floored figure on screen: the planner must not round in your
-// favour any more than the Overview may.
+// never the figure on screen, so no rounding mode can change a verdict.
 
 const MAX_BREAK = 9;      // longest window "Breaks you can afford" looks at, in days
 const MAX_SKIP  = 3;      // most class days one suggested break may ask you to skip
@@ -1985,7 +2048,7 @@ function costText(list){
 }
 function verdictText(v){
   if(v.k === 'no') return 'puts ' + v.st.code + ' ' + hUp(-v.st.budget) + 'h under ' + Math.round(v.st.thr*100) + '% by the end of term';
-  if(v.k === 'tight') return 'affordable, but leaves ' + v.st.code + ' with less than one class of leave';
+  if(v.k === 'tight') return 'affordable, but leaves ' + v.st.code + ' with less leave than its longest class';
   return 'affordable';
 }
 
@@ -2135,7 +2198,7 @@ let ED = null;
 const CYCLE = ['teach','off','Mon','Tue','Wed','Thu','Fri','Sat'];
 
 function edInit(){
-  ED = { start: CALENDAR.start, end: CALENDAR.end, halfBoundary: CALENDAR.halfBoundary,
+  ED = { start: CALENDAR.start, end: CALENDAR.end, firstHalfEnd: CALENDAR.firstHalfEnd, secondHalfStart: CALENDAR.secondHalfStart,
          off: new Set(CALENDAR.off||[]), swaps: Object.assign({}, CALENDAR.swaps||{}) };
 }
 function edState(d){ return ED.off.has(d) ? 'off' : (ED.swaps[d] || 'teach'); }
@@ -2154,7 +2217,8 @@ function edConstant(){
     + "  authored: '"+today()+"', provisional: false,\n"
     + "  source: '"+(CALENDAR.source||'')+"',\n"
     + "  start: '"+ED.start+"', end: '"+ED.end+"',\n"
-    + "  halfBoundary: '"+ED.halfBoundary+"',\n"
+    + "  firstHalfEnd: '"+ED.firstHalfEnd+"',\n"
+    + "  secondHalfStart: '"+ED.secondHalfStart+"',\n"
     + '  off: ['+ off.map(d => "'"+d+"'").join(', ') +'],\n'
     + '  swaps: {'+ sw.map(d => "'"+d+"': '"+ED.swaps[d]+"'").join(', ') +'}\n'
     + '};';
@@ -2165,7 +2229,8 @@ function calendarView(){
     + '<p class="tiny muted">Mon–Sat teach by default. Click a day to cycle it: teaching → no classes → runs Monday → Tuesday → … → teaching. When it looks right, copy the constant and paste it over the <code>CALENDAR</code> block at the top of this file\'s script. Nothing here is saved to your browser, on purpose.</p>'
     + '<div class="row"><label class="field">Term starts<input type="date" id="ed-start" value="'+ED.start+'"></label>'
     + '<label class="field">Term ends<input type="date" id="ed-end" value="'+ED.end+'"></label>'
-    + '<label class="field">Second half begins<input type="date" id="ed-hb" value="'+ED.halfBoundary+'"></label>'
+    + '<label class="field">First half ends<input type="date" id="ed-fhe" value="'+ED.firstHalfEnd+'"></label>'
+    + '<label class="field">Second half begins<input type="date" id="ed-shs" value="'+ED.secondHalfStart+'"></label>'
     + '<button class="btn" id="ed-reset">Reset to the build\'s calendar</button></div></div>';
 
   h += '<div class="months">';
@@ -2239,8 +2304,18 @@ function dataView(){
   return h;
 }
 
+// A preference, not data: a new semester's import keeps it, as it keeps the palette.
+function roundingCard(){
+  const m = bestMode() ? 'best' : 'safe';
+  return '<div class="card"><h2>Rounding</h2><p class="tiny muted">Safe rounds every figure against you and prices each class as the longest one left. '
+    + 'Best possible rounds to the nearest tenth, so a figure can read up to .05h above what you have, and counts the most real classes that fit if you skip the shortest ones first. Colours and verdicts are the same in both.</p>'
+    + '<div class="seg" role="radiogroup" aria-label="Rounding">'
+    + [['safe','Safe'],['best','Best possible']].map(o => '<button role="radio" data-round="' + o[0] + '" aria-checked="' + (m === o[0]) + '">' + o[1] + '</button>').join('')
+    + '</div></div>';
+}
+
 function settingsView(){
-  return dataView()
+  return roundingCard() + dataView()
     + '<details class="disclose"' + (calOpen ? ' open' : '') + ' id="cal-details"><summary>Semester calendar editor &middot; once a term</summary><div class="body">'
     + calendarView() + '</div></details>';
 }
@@ -2310,7 +2385,7 @@ function applyImport(){
     try{ localStorage.setItem(ARCHIVE_PRE + S.semester, JSON.stringify(S)); }catch(e){}
   }
   const fresh = S.semester && p.semester && S.semester !== p.semester;
-  if(fresh){ const keepTheme = S.theme; S = blank(); S.theme = keepTheme; }
+  if(fresh){ const keep = {theme: S.theme, rounding: S.rounding}; S = blank(); Object.assign(S, keep); }
   S.semester = p.semester || null;
   S.planName = p.planName || '';
   S.exportedAt = p.exportedAt || null;
@@ -2385,6 +2460,7 @@ window.hairline = f => { FIGURES[f.name] = f; if(document.querySelector('[data-f
 
 // --- Events ----------------------------------------------------------------
 
+function setRounding(m){ S.rounding = m === 'best' ? 'best' : 'safe'; save(); render(); return S.rounding; }
 function timeToMin(v){ const p = String(v).split(':'); return (+p[0])*60 + (+p[1]); }
 
 document.addEventListener('click', function(e){
@@ -2397,6 +2473,7 @@ document.addEventListener('click', function(e){
   if(d.tab){ view = d.tab; render(); return; }
   if(d.go){ view = d.go; render(); return; }
   if(d.pal){ S.theme = d.pal; save(); applyPalette(d.pal); paintPicker(); return; }
+  if(d.round){ setRounding(d.round); return; }
   if(d.sid){ if(popFor === d.sid) closePop(); else openPop(t, d.sid); return; }
   if(d.mark){
     const s0 = sessions().find(x => x.id === d.mark);
@@ -2544,7 +2621,8 @@ document.addEventListener('change', function(e){
   }
   if(e.target.id === 'ed-start'){ ED.start = e.target.value; render(); return; }
   if(e.target.id === 'ed-end'){ ED.end = e.target.value; render(); return; }
-  if(e.target.id === 'ed-hb'){ ED.halfBoundary = e.target.value; render(); return; }
+  if(e.target.id === 'ed-fhe'){ ED.firstHalfEnd = e.target.value; render(); return; }
+  if(e.target.id === 'ed-shs'){ ED.secondHalfStart = e.target.value; render(); return; }
   if(e.target.id === 'imp-file'){
     const f = e.target.files[0]; if(!f) return;
     readJSON(f).then(data => {
@@ -2585,9 +2663,10 @@ if('serviceWorker' in navigator && location.protocol.indexOf('http') === 0)
   navigator.serviceWorker.register('sw.js').catch(function(){});
 
 // Exposed for the verification harness, not for the page. Everything the UI
-// does goes through a real click; these are read-only handles onto the maths.
+// does goes through a real click; these are handles onto the maths. setRounding
+// is the one console command meant for people: Atten.setRounding('best').
 window.Atten = { portalParse, portalPlan, CALENDAR, PALETTES, sessions, stats, stateLine, contactHours, diffAgainst, countFrom, excluded, nextSession, whenLabel,
-                 judgeDays, breaks, planSet, verdict, parseOfficial, uncheckedCount,
+                 judgeDays, breaks, planSet, verdict, parseOfficial, uncheckedCount, pctText, setRounding,
                  state: () => S, render, save, blank };
 })();
 </script>
