@@ -1243,7 +1243,8 @@ function emptyView(){
     + '<ol class="steps"><li>Open <b>Bob the Builder</b>, pick the plan you are actually enrolled in.</li>'
     + '<li>Click <b>Export for attendance</b>. You get a <code>…-attendance-….json</code> file.</li>'
     + '<li>Come back to <b>Settings</b> here and load that file.</li></ol>'
-    + '<p><button class="btn primary" data-go="settings">Go to Settings</button></p></div>';
+    + '<p><button class="btn primary" data-go="settings">Go to Settings</button></p></div>'
+    + portalCard();
 }
 
 // --- Shared pieces: when a class is over, marks, session rows -------------
@@ -1806,10 +1807,69 @@ function portalPlan(blocks){
   return plan;
 }
 
+// What the paste says on its own, with no timetable loaded. Held, attended and
+// the percentage are exact: they are the portal's own count. What is still to
+// come is not on the portal at all, so it is projected from the weekdays the
+// component has met on and tagged as an estimate. A weekday counts as regular
+// when it holds at least half as many classes as the commonest one, so a
+// Saturday make-up does not turn into a weekly class. Leave is in classes, each
+// weighted equally; the app's hour-weighted budget needs the real timetable.
+function portalDays(entries){
+  const n = {}; entries.forEach(e => { const d = dowName(e.date); n[d] = (n[d]||0) + 1; });
+  const top = Math.max.apply(null, Object.keys(n).map(k => n[k]));
+  return Object.keys(n).filter(k => n[k]*2 >= top);
+}
+function portalRemaining(entries){
+  const days = portalDays(entries), last = entries.reduce((a,e) => e.date > a ? e.date : a, '');
+  const off = new Set(CALENDAR.off || []), swaps = CALENDAR.swaps || {};
+  let rem = 0;
+  for(let d = addDays(last, 1); d <= CALENDAR.end; d = addDays(d, 1)){
+    if(off.has(d)) continue;
+    const real = dowName(d); if(real === 'Sun' && !swaps[d]) continue;
+    if(days.indexOf(swaps[d] || real) >= 0) rem++;
+  }
+  return rem;
+}
+function portalVerdict(code, att, held, rem){
+  const thr = thresholdOf(code), bar = Math.round(thr*100) + '%';
+  if(att >= thr*held - 1e-9){
+    const n = Math.max(0, Math.min(rem, Math.floor(att + rem - thr*(held + rem) + 1e-9)));
+    return n ? 'can miss <b>' + n + '</b> more at ' + bar : 'no leave left at ' + bar;
+  }
+  const k = Math.ceil((thr*held - att)/(1 - thr) - 1e-9);
+  return k <= rem ? 'under ' + bar + ': attend the next <b>' + k + '</b> in a row' : '<span class="est">under ' + bar + ', cannot be recovered</span>';
+}
+function portalSummary(blocks){
+  const rows = [], byCode = {};
+  blocks.forEach(b => {
+    if(b.err || !b.entries.length) return;
+    const att = b.entries.filter(e => e.mark === 'P').length, held = b.entries.length;
+    const last = b.entries.reduce((a,e) => e.date > a ? e.date : a, '');
+    const r = { label: b.code + ' ' + b.token, code: b.code, att, held, rem: portalRemaining(b.entries), last };
+    rows.push(r); (byCode[b.code] = byCode[b.code] || []).push(r);
+  });
+  if(!rows.length) return '';
+  Object.keys(byCode).forEach(k => {
+    const g = byCode[k]; if(g.length < 2) return;
+    const t = { label: k + ' all, if pooled', code: k, att: 0, held: 0, rem: 0, pooled: true };
+    g.forEach(r => { t.att += r.att; t.held += r.held; t.rem += r.rem; });
+    rows.splice(rows.indexOf(g[g.length-1]) + 1, 0, t);
+  });
+  const old = rows.filter(r => r.last && r.last < addDays(today(), -14));
+  return '<div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>Class</th><th class="num">Attended</th><th class="num">Percent</th>'
+    + '<th class="num">To come <span class="est">est.</span></th><th>Verdict <span class="est">est.</span></th></tr></thead><tbody>'
+    + rows.map(r => '<tr' + (r.pooled ? ' class="muted"' : '') + '><td style="white-space:nowrap">' + esc(r.label) + '</td><td class="num">' + r.att + ' / ' + r.held + '</td>'
+      + '<td class="num">' + pctText(r.att/r.held) + '</td><td class="num">' + r.rem + '</td><td style="min-width:26ch">' + portalVerdict(r.code, r.att, r.held, r.rem) + '</td></tr>').join('')
+    + '</tbody></table></div>'
+    + '<p class="tiny muted" style="margin:8px 0 0">Attended, held and percent are the portal\'s own count. <b>To come</b> is not on the portal: it assumes each class keeps meeting on its usual weekdays until ' + esc(prettyDate(CALENDAR.end)) + ', minus the calendar\'s off days. Leave counts classes, not hours.'
+    + (old.length ? ' <span class="est">' + esc(old.map(r => r.label).join(', ')) + ' last met more than two weeks ago; if that class has ended, nothing is still to come.</span>' : '') + '</p>';
+}
+
 function portalCard(){
-  if(!S.courses.length) return '';
   return '<div class="card"><h2>Paste the portal record</h2>'
-    + '<p class="tiny muted">Copy the attendance table from the university portal and paste it here. The portal is the official record, so its P and A <b>overwrite</b> marks logged here, including ones you set by hand. Nothing is written until you press Apply, and Apply can be undone.</p>'
+    + '<p class="tiny muted">Copy the attendance table from the university portal and paste it here.'
+    + (S.courses.length ? ' The portal is the official record, so its P and A <b>overwrite</b> marks logged here, including ones you set by hand. Nothing is written until you press Apply, and Apply can be undone.'
+                        : ' With no timetable loaded this gives each class\'s percentage and leave straight from the paste, and saves nothing.') + '</p>'
     + '<label class="field">Portal table<textarea id="pt-text" rows="4" spellcheck="false" placeholder="Course Code&#10;17 Aug-1 ...&#10;DOM207 - LECL1   P   P   A ..."></textarea></label>'
     + '<div id="pt-diff"></div></div>';
 }
@@ -1822,11 +1882,18 @@ function portalShow(){
   if(!text){ out.innerHTML = ''; return; }
   const blocks = portalParse(text);
   if(!blocks.length){ out.innerHTML = '<div class="msg err" role="status">No attendance rows found. Copy from the "Course Code" line down to the last P/A row.</div>'; return; }
+  const sum = portalSummary(blocks);
+  if(!S.courses.length){
+    out.innerHTML = (sum || '<div class="msg err" role="status">No block could be read.</div>')
+      + blocks.filter(b => b.err).map(b => '<p class="tiny est" style="margin:6px 0 0">' + esc(b.code + ' ' + b.token + ': ' + b.err) + '</p>').join('')
+      + '<p class="tiny muted" style="margin:10px 0 0">Nothing is saved. Load a timetable from Bob in Settings to log these marks class by class.</p>';
+    return;
+  }
   const p = portalPlan(blocks), good = p.rows.filter(r => !r.err);
   const changed = good.reduce((a,r) => a + r.changed, 0), handset = good.reduce((a,r) => a + r.handset, 0);
   const rt = p.through && (!S.reviewedThrough || p.through > S.reviewedThrough) ? p.through : null;
   const useful = changed + p.cancels.length + p.adds.length + (rt ? 1 : 0);
-  let h = '';
+  let h = sum;
   p.rows.forEach(r => {
     h += '<div class="ckday"><div class="spread"><h4>' + esc(r.head) + '</h4><span class="tiny muted">' + r.n + ' classes on the record</span></div>';
     if(r.err){ h += '<p class="tiny est" style="margin:4px 0 0">' + esc(r.err) + ' Skipped.</p></div>'; return; }
