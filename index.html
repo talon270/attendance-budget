@@ -529,6 +529,8 @@ label.field > *{text-transform:none; letter-spacing:0; font-size:.95rem; font-we
 
 /* ---------- check-in ---------- */
 .ckday{margin-top:var(--s4)}
+.ptck{display:flex; gap:10px; align-items:flex-start; padding:10px 0; min-height:44px; cursor:pointer}
+.ptck input{width:20px; height:20px; flex:none; margin:0}
 .ckday .spread{align-items:center}
 .ckday h4{margin:0; font:600 .8rem/1.3 var(--mono)}
 
@@ -1708,10 +1710,165 @@ function reconcileCard(){
   return h + '</div>';
 }
 
+// --- Log: paste the portal's attendance table --------------------------------
+//
+// The portal is the official record, so its P and A overwrite whatever is
+// logged here, including marks set by hand. The paste is read into a plan and
+// shown as a diff; nothing is written until Apply, and Apply goes on the undo
+// stack like every other change.
+//
+// Each block is "Course Code", N dates, then "CODE - LECL1  P P A ...". The
+// dates are the classes the portal says were held, so they carry more than the
+// P/A: a timetable class with no portal date was not held (cancelled), and a
+// portal date with no timetable class is a make-up (added). Both are only
+// proposals - a lecturer who has not entered attendance yet looks the same as
+// a cancellation - so each is a tick box, and only dates before a block's last
+// portal date are judged. A "-2" after a date is the second class that day.
+const MONTHS = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+let PORTAL = null;
+
+function portalParse(text){
+  const blocks = [], y0 = +CALENDAR.start.slice(0,4), m0 = +CALENDAR.start.slice(5,7);
+  let dates = [];
+  String(text).split(/\r?\n/).forEach(raw => {
+    const line = raw.trim(); if(!line) return;
+    if(/^course code$/i.test(line)){ dates = []; return; }
+    let m = line.match(/^(\d{1,2})\s+([A-Za-z]{3})[A-Za-z]*\s*-\s*(\d+)$/);
+    if(m){
+      const mo = MONTHS[m[2].toLowerCase()]; if(!mo) return;
+      const y = mo < m0 ? y0 + 1 : y0;
+      dates.push({date: y+'-'+String(mo).padStart(2,'0')+'-'+m[1].padStart(2,'0'), n: +m[3]});
+      return;
+    }
+    m = line.match(/^(\S+?)\s*-\s*([A-Za-z0-9]+)\s+(.+)$/);
+    if(!m) return;
+    const marks = m[3].trim().split(/\s+/).map(x => x.toUpperCase());
+    const b = { code: m[1].toUpperCase(), token: m[2].toUpperCase(), entries: [], err: null, skipped: 0 };
+    if(!dates.length) b.err = 'No dates above this row.';
+    else if(dates.length !== marks.length) b.err = dates.length + ' dates but ' + marks.length + ' marks, so they cannot be paired. Re-copy the table.';
+    else dates.forEach((d, i) => {
+      if(marks[i] === 'P' || marks[i] === 'A') b.entries.push({date:d.date, n:d.n, mark: marks[i]});
+      else b.skipped++;
+    });
+    blocks.push(b); dates = [];
+  });
+  return blocks;
+}
+
+// Turns parsed blocks into what an apply would write. Reads S, writes nothing.
+function portalPlan(blocks){
+  const plan = { rows: [], marks: {}, cancels: [], adds: [], through: null };
+  const addIds = new Set(), all = sessions();
+  blocks.forEach(b => {
+    const row = { head: b.code + ' ' + b.token, n: b.entries.length, err: b.err, att: 0, abs: 0, changed: 0,
+                  handset: 0, cancelled: [], added: [], unplaced: [], skipped: b.skipped, last: null };
+    plan.rows.push(row);
+    if(b.err) return;
+    const c = S.courses.find(x => b.code.split('/').some(k => k === x.code || x.code.split('/').indexOf(k) >= 0));
+    if(!c){ row.err = b.code + ' is not in the loaded timetable.'; return; }
+    const comps = Array.from(new Set((c.meetings||[]).map(m => m.comp))).sort((a,z) => z.length - a.length);
+    const comp = comps.find(k => b.token.indexOf(k.toUpperCase()) === 0);
+    if(!comp){ row.err = c.code + ' has no component matching ' + b.token + ' (it has ' + comps.join(', ') + ').'; return; }
+    row.head = c.code + ' ' + comp;
+    const tmpl = c.meetings.find(m => m.comp === comp);
+    const byDate = {}, xByDate = {};
+    all.filter(s => s.code === c.code).forEach(s => {
+      const g = s.extra ? xByDate : (s.comp === comp ? byDate : null); if(!g) return;
+      (g[s.date] = g[s.date] || []).push(s);
+    });
+    const last = b.entries.reduce((a,e) => e.date > a ? e.date : a, '');
+    row.last = last;
+    const used = new Set();
+    b.entries.forEach(e => {
+      const want = e.mark === 'P' ? 'attended' : 'absent';
+      e.mark === 'P' ? row.att++ : row.abs++;
+      let s = (byDate[e.date]||[])[e.n-1] || (e.n === 1 ? (xByDate[e.date]||[])[0] : null);
+      if(s){
+        used.add(s.id); plan.marks[s.id] = want;
+        const cur = markOf(s);
+        if(cur !== want){ row.changed++; if(S.log[s.id]) row.handset++; }
+        return;
+      }
+      const id = c.code+'|EXTRA|X|'+e.date+'|'+(tmpl && tmpl.start);
+      if(!tmpl || e.date < CALENDAR.start || e.date > CALENDAR.end || addIds.has(id)){ row.unplaced.push(e.date); return; }
+      addIds.add(id); row.added.push(e.date);
+      plan.adds.push({ x:{code:c.code, date:e.date, start:tmpl.start, end:tmpl.end}, id, want });
+    });
+    Object.keys(byDate).forEach(d => byDate[d].forEach(s => {
+      if(used.has(s.id) || s.date >= last || markOf(s) === 'cancelled') return;
+      row.cancelled.push(s.date); plan.cancels.push(s.id);
+      if(S.log[s.id]) row.handset++;
+    }));
+    // Everything up to the earliest block end is on the record for every course.
+    const lim = last < lastDay() ? last : lastDay();
+    if(plan.through === null || lim < plan.through) plan.through = lim;
+  });
+  return plan;
+}
+
+function portalCard(){
+  if(!S.courses.length) return '';
+  return '<div class="card"><h2>Paste the portal record</h2>'
+    + '<p class="tiny muted">Copy the attendance table from the university portal and paste it here. The portal is the official record, so its P and A <b>overwrite</b> marks logged here, including ones you set by hand. Nothing is written until you press Apply, and Apply can be undone.</p>'
+    + '<label class="field">Portal table<textarea id="pt-text" rows="4" spellcheck="false" placeholder="Course Code&#10;17 Aug-1 ...&#10;DOM207 - LECL1   P   P   A ..."></textarea></label>'
+    + '<div id="pt-diff"></div></div>';
+}
+
+const dateList = ds => ds.slice(0, 8).map(prettyDate).join(', ') + (ds.length > 8 ? ' and ' + (ds.length-8) + ' more' : '');
+function portalShow(){
+  const out = $('#pt-diff'); if(!out) return;
+  const text = $('#pt-text').value.trim();
+  PORTAL = null;
+  if(!text){ out.innerHTML = ''; return; }
+  const blocks = portalParse(text);
+  if(!blocks.length){ out.innerHTML = '<div class="msg err" role="status">No attendance rows found. Copy from the "Course Code" line down to the last P/A row.</div>'; return; }
+  const p = portalPlan(blocks), good = p.rows.filter(r => !r.err);
+  const changed = good.reduce((a,r) => a + r.changed, 0), handset = good.reduce((a,r) => a + r.handset, 0);
+  const rt = p.through && (!S.reviewedThrough || p.through > S.reviewedThrough) ? p.through : null;
+  const useful = changed + p.cancels.length + p.adds.length + (rt ? 1 : 0);
+  let h = '';
+  p.rows.forEach(r => {
+    h += '<div class="ckday"><div class="spread"><h4>' + esc(r.head) + '</h4><span class="tiny muted">' + r.n + ' classes on the record</span></div>';
+    if(r.err){ h += '<p class="tiny est" style="margin:4px 0 0">' + esc(r.err) + ' Skipped.</p></div>'; return; }
+    h += '<p class="tiny" style="margin:4px 0 0">' + r.att + ' attended, ' + r.abs + ' missed. '
+      + (r.changed ? '<b>' + r.changed + '</b> change here' + (r.handset ? ' (' + r.handset + ' set by hand are overwritten)' : '') + '.' : 'Already matches.');
+    if(r.cancelled.length) h += '<br>Not on the portal, proposed cancelled: ' + esc(dateList(r.cancelled)) + '.';
+    if(r.added.length) h += '<br>Not on the timetable, proposed make-up: ' + esc(dateList(r.added)) + '.';
+    if(r.unplaced.length) h += '<br><span class="est">Cannot place: ' + esc(dateList(r.unplaced)) + ' (outside the term, or no meeting time to copy).</span>';
+    if(r.skipped) h += '<br><span class="est">' + r.skipped + ' mark(s) were neither P nor A and were ignored.</span>';
+    h += '</p></div>';
+  });
+  if(!useful){ out.innerHTML = h + '<div class="msg ok" role="status" style="margin-top:12px">Nothing to change: this app already agrees with the portal.</div>'; return; }
+  PORTAL = Object.assign(p, {rt});
+  const ck = (id, n, text) => n ? '<label class="ptck"><input type="checkbox" id="' + id + '" checked><span class="tiny">' + text + '</span></label>' : '';
+  h += '<div style="margin-top:12px">'
+    + ck('pt-cancel', p.cancels.length, 'Cancel the <b>' + p.cancels.length + '</b> class' + (p.cancels.length===1?'':'es') + ' the portal does not list. A cancelled class leaves the count, which can raise your percentage; untick it if a lecturer may just not have entered attendance yet.')
+    + ck('pt-add', p.adds.length, 'Add the <b>' + p.adds.length + '</b> class' + (p.adds.length===1?'':'es') + ' the portal lists that your timetable does not, as make-ups, using that component\'s usual time.')
+    + ck('pt-through', rt ? 1 : 0, 'Mark classes up to <b>' + esc(prettyDate(rt || '')) + '</b> as checked, since the portal covers them. Classes after a course\'s last portal date stay as they are.')
+    + '</div><div class="row" style="margin-top:12px"><button class="btn primary" id="pt-ok">Apply the portal record</button> <button class="btn" id="pt-clear">Clear</button></div>';
+  out.innerHTML = h;
+}
+function applyPortal(){
+  const p = PORTAL; if(!p) return;
+  const on = id => { const e = $(id); return !!(e && e.checked); };
+  const was = {extras: S.extras.slice(), reviewedThrough: S.reviewedThrough};
+  const g = {attended:[], absent:[], cancelled:[]};
+  Object.keys(p.marks).forEach(id => g[p.marks[id]].push(id));
+  const nAdd = on('#pt-add') ? p.adds.length : 0, nCan = on('#pt-cancel') ? p.cancels.length : 0;
+  if(nAdd) p.adds.forEach(a => { S.extras.push(a.x); g[a.want].push(a.id); });
+  if(nCan) p.cancels.forEach(id => g.cancelled.push(id));
+  const before = {};
+  Object.keys(g).forEach(k => Object.assign(before, writeMarks(g[k], k)));
+  if(p.rt && on('#pt-through')) S.reviewedThrough = p.rt;
+  invalidate(); save(); PORTAL = null;
+  remember('Applied the portal record: ' + Object.keys(before).length + ' mark' + (Object.keys(before).length===1?'':'s') + ' changed, ' + nCan + ' cancelled, ' + nAdd + ' added', before, was);
+  render();
+}
+
 function logView(){
   if(!logCourse || !S.courses.some(c => c.code === logCourse)) logCourse = S.courses[0].code;
   // No start-up question here: the check-in below is the answer to it.
-  return '<div class="split"><div>' + checkinCard()
+  return '<div class="split"><div>' + checkinCard() + portalCard()
     + '<div class="card"><h2>Fix one course</h2><p class="tiny muted">Every class of the term, newest first. Set any one of them directly.</p>'
     + '<label class="field">Course<select id="lg-course">' + S.courses.map(c => '<option value="' + esc(c.code) + '"'
       + (c.code === logCourse ? ' selected' : '') + '>' + esc(c.code) + '</option>').join('') + '</select></label>'
@@ -2213,6 +2370,8 @@ document.addEventListener('click', function(e){
 
   switch(t.id){
     case 'undo-mark': undo(); return;
+    case 'pt-ok': applyPortal(); return;
+    case 'pt-clear': $('#pt-text').value = ''; portalShow(); return;
     case 'su-check': view = 'log'; render(); return;
     case 'su-today': {
       const was = {countFrom: S.countFrom, reviewedThrough: S.reviewedThrough};
@@ -2292,6 +2451,8 @@ function selectOut(){
   const m = $('#ed-msg'); if(m) m.textContent = 'Selected - press Ctrl+C to copy.';
 }
 
+document.addEventListener('input', function(e){ if(e.target.id === 'pt-text') portalShow(); });
+
 document.addEventListener('change', function(e){
   const d = e.target.dataset;
   if(d.thr){
@@ -2358,7 +2519,7 @@ if('serviceWorker' in navigator && location.protocol.indexOf('http') === 0)
 
 // Exposed for the verification harness, not for the page. Everything the UI
 // does goes through a real click; these are read-only handles onto the maths.
-window.Atten = { CALENDAR, PALETTES, sessions, stats, stateLine, contactHours, diffAgainst, countFrom, excluded, nextSession, whenLabel,
+window.Atten = { portalParse, portalPlan, CALENDAR, PALETTES, sessions, stats, stateLine, contactHours, diffAgainst, countFrom, excluded, nextSession, whenLabel,
                  judgeDays, breaks, planSet, verdict, parseOfficial, uncheckedCount,
                  state: () => S, render, save, blank };
 })();
